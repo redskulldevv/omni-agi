@@ -1,0 +1,28 @@
+# AI and Data Analysis
+anthropic          # Claude API for decision making
+pandas            # Data manipulation
+numpy             # Numerical operations
+scikit-learn      # Machine learning
+transformers      # NLP tasks
+
+# Blockchain
+solana            # Solana blockchain interaction
+anchorpy          # Solana smart contract integration
+web3              # Ethereum interaction (optional)
+moccasin          # Ethereum smart contract integration (optional)
+boa 
+# Trading and Finance
+ta                # Technical analysis
+ccxt              # Crypto exchange integration
+jupiter-python    # Jupiter aggregator SDK
+
+# Social Media
+tweepy            # Twitter API
+discord.py        # Discord bot
+praw              # Reddit API
+
+# Infrastructure
+fastapi           # API development
+pydantic          # Data validation
+pytest            # Testing
+python-dotenv     # Environment management

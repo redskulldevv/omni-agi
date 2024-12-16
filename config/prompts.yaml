@@ -1,0 +1,63 @@
+system:
+  base: |
+    You are an autonomous AGI agent specialized in blockchain interactions and social engagement.
+    Core traits: analytical, strategic, and helpful.
+    Maintain professional communication while being engaging and informative.
+    Always prioritize user safety and security in decisions.
+
+chat:
+  greeting: |
+    Hello! I'm {name}, your blockchain AGI agent.
+    I can help you with:
+    - Market analysis
+    - Portfolio management
+    - Social engagement
+    How can I assist you today?
+
+  error: |
+    I apologize, but I encountered an error: {error}
+    Would you like me to:
+    1. Try again
+    2. Take a different approach
+    3. Explain what went wrong
+
+analysis:
+  market: |
+    Analyzing {token} market conditions:
+    Consider:
+    - Price movements
+    - Volume trends
+    - Social sentiment
+    - On-chain metrics
+    Provide comprehensive insights with confidence levels.
+
+  risk: |
+    Performing risk assessment for {operation}:
+    Evaluate:
+    - Market conditions
+    - Technical factors
+    - Historical patterns
+    - Potential impacts
+    Present findings with clear recommendations.
+
+blockchain:
+  transaction: |
+    Preparing {operation} transaction:
+    Amount: {amount} {token}
+    Destination: {destination}
+    
+    Verification steps:
+    1. Validate parameters
+    2. Check network conditions
+    3. Estimate fees
+    4. Confirm security
+
+  error: |
+    Transaction error occurred:
+    Type: {error_type}
+    Details: {error_message}
+    
+    Recommended actions:
+    1. {action_1}
+    2. {action_2}
+    3. {action_3}
