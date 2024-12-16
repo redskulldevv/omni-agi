@@ -1,79 +1,54 @@
 from web3 import Web3
 from eth_account import Account
 import json
-from typing import Dict, Optional, List
-import logging
+import os
+from typing import Dict, Optional
 from decimal import Decimal
+import logging
+from zksync2.module.module_builder import ZkSyncBuilder
 
 logger = logging.getLogger(__name__)
 
-class EthereumWallet:
-    def __init__(self, rpc_url: str, private_key: Optional[str] = None):
+class ZkWallet:
+    def __init__(self, rpc_url: str, zksync_url: str, private_key: Optional[str] = None):
         self.w3 = Web3(Web3.HTTPProvider(rpc_url))
+        self.zk_web3 = ZkSyncBuilder.build(zksync_url)
         self.account = Account.from_key(private_key) if private_key else None
+        self.abis = self._load_abis()
         
-    async def create_wallet(self) -> Dict[str, str]:
-        """Create new Ethereum wallet"""
-        try:
-            account = Account.create()
-            return {
-                'address': account.address,
-                'private_key': account.key.hex(),
-                'message': 'Store private key securely!'
-            }
-        except Exception as e:
-            logger.error(f"Error creating wallet: {e}")
-            raise
-            
-    async def get_balance(self, address: Optional[str] = None) -> Dict[str, Decimal]:
-        """Get ETH and token balances"""
+    def _load_abis(self) -> Dict:
+        """Load all ABIs from the abis folder"""
+        abis = {}
+        abis_path = os.path.join(os.path.dirname(__file__), 'abis')
+        
+        for filename in os.listdir(abis_path):
+            if filename.endswith('.json'):
+                with open(os.path.join(abis_path, filename), 'r') as f:
+                    abis[filename[:-5]] = json.load(f)
+                    
+        return abis
+        
+    async def get_l2_balance(
+        self,
+        token_address: Optional[str] = None,
+        address: Optional[str] = None
+    ) -> Decimal:
+        """Get balance on zkSync"""
         try:
             address = address or self.account.address
-            eth_balance = self.w3.eth.get_balance(address)
             
-            balances = {
-                'ETH': Web3.from_wei(eth_balance, 'ether')
-            }
-            
-            # Add common token balances
-            tokens = {
-                'USDC': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-                'USDT': '0xdAC17F958D2ee523a2206206994597C13D831ec7'
-            }
-            
-            for symbol, contract_address in tokens.items():
-                try:
-                    token_contract = self.w3.eth.contract(
-                        address=contract_address,
-                        abi=self.get_erc20_abi()
-                    )
-                    decimals = token_contract.functions.decimals().call()
-                    balance = token_contract.functions.balanceOf(address).call()
-                    balances[symbol] = Decimal(balance) / Decimal(10 ** decimals)
-                except Exception as e:
-                    logger.warning(f"Error getting {symbol} balance: {e}")
-                    
-            return balances
-            
+            if token_address:
+                token_contract = self.zk_web3.eth.contract(
+                    address=token_address,
+                    abi=self.abis['usdc' if 'USDC' in token_address.upper() else 'weth']
+                )
+                balance = token_contract.functions.balanceOf(address).call()
+                decimals = token_contract.functions.decimals().call()
+                return Decimal(balance) / Decimal(10 ** decimals)
+            else:
+                balance = self.zk_web3.eth.get_balance(address)
+                return Web3.from_wei(balance, 'ether')
+                
         except Exception as e:
-            logger.error(f"Error getting balances: {e}")
+            logger.error(f"Error getting L2 balance: {e}")
             raise
-            
-    def get_erc20_abi(self) -> List:
-        """Return basic ERC20 ABI"""
-        return [
-            {
-                "constant": True,
-                "inputs": [{"name": "owner", "type": "address"}],
-                "name": "balanceOf",
-                "outputs": [{"name": "", "type": "uint256"}],
-                "type": "function"
-            },
-            {
-                "constant": True,
-                "inputs": [],
-                "name": "decimals",
-                "outputs": [{"name": "", "type": "uint8"}],
-                "type": "function"
-            }
-        ]

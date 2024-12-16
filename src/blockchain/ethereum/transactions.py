@@ -1,11 +1,146 @@
+from datetime import time
+from eth_account import Account
 from web3 import Web3
-from eth_account.messages import encode_defunct
+# from zksync2.zksync_builder import ZkSyncBuilder
 from typing import Dict, List, Optional, Union
 import logging
-import json
 from decimal import Decimal
-
+from web3 import Web3
+# from zksync2.zksync_builder import ZkSyncBuilder
 logger = logging.getLogger(__name__)
+class ZkTransactions:
+    def __init__(self, rpc_url: str, zksync_url: str, private_key: Optional[str] = None):
+        self.w3 = Web3(Web3.HTTPProvider(rpc_url))
+        # self.zk_web3 = ZkSyncBuilder.build(zksync_url)
+        self.account = Account.from_key(private_key) if private_key else None
+        self.abis = self._load_abis()
+        
+    async def deposit_to_l2(
+        self,
+        amount: Union[int, float, Decimal],
+        token_address: Optional[str] = None
+    ) -> Dict[str, str]:
+        """Deposit from L1 to L2"""
+        try:
+            if not self.account:
+                raise ValueError("No account configured")
+                
+            # Handle ETH deposit
+            if not token_address:
+                deposit_tx = self.zk_web3.zksync.deposit_eth(
+                    Web3.to_wei(amount, 'ether')
+                )
+                return {
+                    'transaction_hash': deposit_tx.hash.hex(),
+                    'status': 'pending',
+                    'type': 'eth_deposit'
+                }
+                
+            # Handle token deposit
+            token_contract = self.w3.eth.contract(
+                address=token_address,
+                abi=self.abis['usdc' if 'USDC' in token_address.upper() else 'weth']
+            )
+            
+            decimals = token_contract.functions.decimals().call()
+            amount_wei = int(Decimal(amount) * Decimal(10 ** decimals))
+            
+            # Approve if needed
+            allowance = token_contract.functions.allowance(
+                self.account.address,
+                self.zk_web3.zksync.main_contract.address
+            ).call()
+            
+            if allowance < amount_wei:
+                approve_tx = token_contract.functions.approve(
+                    self.zk_web3.zksync.main_contract.address,
+                    amount_wei
+                ).build_transaction({
+                    'from': self.account.address,
+                    'nonce': self.w3.eth.get_transaction_count(self.account.address)
+                })
+                
+                signed_approve = self.account.sign_transaction(approve_tx)
+                self.w3.eth.send_raw_transaction(signed_approve.rawTransaction)
+                
+            # Deposit token
+            deposit_tx = self.zk_web3.zksync.deposit_token(
+                token_address,
+                amount_wei,
+                self.account.address
+            )
+            
+            return {
+                'transaction_hash': deposit_tx.hash.hex(),
+                'status': 'pending',
+                'type': 'token_deposit'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error depositing to L2: {e}")
+            raise
+            
+    async def swap_on_uniswap(
+        self,
+        token_in: str,
+        token_out: str,
+        amount_in: Union[int, float, Decimal],
+        slippage: float = 0.005  # 0.5%
+    ) -> Dict[str, str]:
+        """Swap tokens using Uniswap on zkSync"""
+        try:
+            if not self.account:
+                raise ValueError("No account configured")
+                
+            router_contract = self.zk_web3.eth.contract(
+                address=self.abis['uniswap_swap_router']['address'],
+                abi=self.abis['uniswap_swap_router']['abi']
+            )
+            
+            # Get decimals
+            token_in_contract = self.zk_web3.eth.contract(
+                address=token_in,
+                abi=self.abis['usdc' if 'USDC' in token_in.upper() else 'weth']
+            )
+            decimals = token_in_contract.functions.decimals().call()
+            amount_in_wei = int(Decimal(amount_in) * Decimal(10 ** decimals))
+            
+            # Get quote
+            quote = router_contract.functions.getQuote(
+                token_in,
+                token_out,
+                amount_in_wei
+            ).call()
+            
+            min_amount_out = int(quote * (1 - slippage))
+            
+            # Build swap transaction
+            swap_tx = router_contract.functions.swapExactTokensForTokens(
+                amount_in_wei,
+                min_amount_out,
+                [token_in, token_out],
+                self.account.address,
+                int(time.time()) + 1800  # 30 min deadline
+            ).build_transaction({
+                'from': self.account.address,
+                'nonce': self.zk_web3.eth.get_transaction_count(self.account.address)
+            })
+            
+            # Sign and send
+            signed_tx = self.account.sign_transaction(swap_tx)
+            tx_hash = self.zk_web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+            
+            return {
+                'transaction_hash': tx_hash.hex(),
+                'status': 'pending',
+                'type': 'swap',
+                'amount_in': str(amount_in),
+                'expected_out': str(Decimal(quote) / Decimal(10 ** decimals))
+            }
+            
+        except Exception as e:
+            logger.error(f"Error swapping on Uniswap: {e}")
+            raise
 
 class EthereumTransactions:
     def __init__(self, rpc_url: str, private_key: Optional[str] = None):
