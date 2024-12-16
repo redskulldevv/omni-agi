@@ -8,29 +8,24 @@ api:
     timeframe: 60  # seconds
 
 ai:
-  primary_model: "claude-3-opus"
-  backup_model: "groq"
-  temperature: 0.7
-  max_tokens: 1000
-  context_window: 5
-  cache_responses: true
+  models:
+    primary: "claude-3-opus-20240229"
+    fallback: "mixtral-8x7b-32768"
+  parameters:
+    temperature: 0.7
+    max_tokens: 1000
+    context_window: 5
+    cache_responses: true
 
 blockchain:
   networks:
-    - name: "solana"
-      rpc_url: "https://api.mainnet-beta.solana.com"
-      ws_url: "wss://api.mainnet-beta.solana.com"
-    - name: "ethereum"
-      rpc_url: "https://eth-mainnet.g.alchemy.com/v2/your-api-key"
-  
-  wallets:
-    primary:
-      type: "crossmint"
-      auto_fund: false
-      max_transaction: 1000
-    backup:
-      type: "local"
-      auto_fund: false
+    solana:
+      rpc_url: "${SOLANA_RPC_URL}"
+      ws_url: "${SOLANA_WS_URL}"
+      commitment: "confirmed"
+    ethereum:
+      rpc_url: "${ETH_RPC_URL}"
+      chain_id: 1
 
 social:
   twitter:
@@ -39,17 +34,17 @@ social:
     monitor_mentions: true
   discord:
     command_prefix: "!"
-    guild_id: "your-guild-id"
+    guild_id: "${DISCORD_GUILD_ID}"
 
 logging:
   level: "INFO"
-  file: "agent.log"
+  file: "logs/agent.log"
   max_size: 10485760  # 10MB
   backup_count: 5
 
 security:
   api_keys:
-    valid_duration: 3600  # seconds
+    valid_duration: 3600
     max_active: 10
   rate_limiting: true
   ip_whitelist: []

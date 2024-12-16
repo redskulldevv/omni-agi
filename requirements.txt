@@ -10,7 +10,8 @@ solana            # Solana blockchain interaction
 anchorpy          # Solana smart contract integration
 web3              # Ethereum interaction (optional)
 moccasin          # Ethereum smart contract integration (optional)
-boa 
+boa
+solana-agentkit   # Solana agent development
 # Trading and Finance
 ta                # Technical analysis
 ccxt              # Crypto exchange integration

@@ -4,14 +4,29 @@ out = "out"
 dot_env = ".env"
 save_abi_path = "abis"
 default_network_name = "mainnet-fork"
-name = "moccasin_project"
-version = "0.1.0"
-description = "Add your description here"
+name = "autovc-agent"
+version = "1.0.0"
+description = "Autonomous AI Agent for blockchain operations"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "snekmate",
 ]
+
+[dependencies]
+solana = "1.17.0"
+web3 = "6.11.3"
+groq = "1.0.0"
+anthropic = "0.7.0"
+
+[network]
+default = "mainnet-beta"
+backup = "testnet"
+
+[testing]
+mock_transactions = true
+local_validator = false
+
 [networks.contracts]
 weth = { abi = "abis/weth.json" }
 usdc = { abi = "abis/usdc.json" }
@@ -76,6 +91,5 @@ aavev3_pool_address_provider = { address = "0x2A3948BB219D6B2Fa83D64100006391a96
 aave_protocol_data_provider = { address = "0x5F2A704cE47B373c908fE8A29514249469b52b99" }
 eth_usd_price_feed = { address = "0x6D41d1dc818112880b40e26BD6FD347E41008eDA" }
 usdc_usd_price_feed = { address = "0x1824D297C6d6D311A204495277B63e943C2D376E" }
-
 
 # You can view all configuration options at https://cyfrin.github.io/moccasin/all_moccasin_toml_parameters.html
