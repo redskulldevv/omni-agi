@@ -1,13 +1,13 @@
 from typing import Dict, Any, Optional
-from datetime import datetime
+
 
 class AIPrompts:
     """Prompt templates for AI models"""
-    
+
     @staticmethod
     def get_system_prompt(agent_name: str, personality: Dict[str, Any]) -> str:
         """Get base system prompt
-        
+
         Args:
             agent_name: Name of the agent
             personality: Personality traits and settings
@@ -35,10 +35,7 @@ Current blockchain focus: Solana ecosystem
 """
 
     @staticmethod
-    def market_analysis(
-        context: Dict[str, Any],
-        depth: str = "detailed"
-    ) -> str:
+    def market_analysis(context: Dict[str, Any], depth: str = "detailed") -> str:
         """Get market analysis prompt"""
         return f"""Analyze the following market conditions:
 
@@ -99,9 +96,7 @@ Format as detailed action plan.
 
     @staticmethod
     def social_engagement(
-        platform: str,
-        content_type: str,
-        context: Dict[str, Any]
+        platform: str, content_type: str, context: Dict[str, Any]
     ) -> str:
         """Get social media engagement prompt"""
         return f"""Generate {content_type} content for {platform}:
@@ -120,10 +115,7 @@ Follow platform best practices while maintaining authenticity.
 """
 
     @staticmethod
-    def risk_assessment(
-        operation: str,
-        parameters: Dict[str, Any]
-    ) -> str:
+    def risk_assessment(operation: str, parameters: Dict[str, Any]) -> str:
         """Get risk assessment prompt"""
         return f"""Assess risks for the following operation:
 
@@ -146,8 +138,7 @@ Format response as risk matrix with:
 
     @staticmethod
     def portfolio_optimization(
-        holdings: Dict[str, Any],
-        constraints: Dict[str, Any]
+        holdings: Dict[str, Any], constraints: Dict[str, Any]
     ) -> str:
         """Get portfolio optimization prompt"""
         return f"""Optimize portfolio allocation:
@@ -174,8 +165,7 @@ Consider:
 
     @staticmethod
     def community_management(
-        issue: str,
-        context: Optional[Dict[str, Any]] = None
+        issue: str, context: Optional[Dict[str, Any]] = None
     ) -> str:
         """Get community management prompt"""
         return f"""Handle community interaction:
@@ -195,8 +185,7 @@ Maintain community guidelines while building positive relationships.
 
     @staticmethod
     def trade_execution(
-        trade_params: Dict[str, Any],
-        market_context: Dict[str, Any]
+        trade_params: Dict[str, Any], market_context: Dict[str, Any]
     ) -> str:
         """Get trade execution prompt"""
         return f"""Evaluate and execute trade:

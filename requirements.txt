@@ -4,7 +4,7 @@ pandas            # Data manipulation
 numpy             # Numerical operations
 scikit-learn      # Machine learning
 transformers      # NLP tasks
-
+git+ssh://git@github.com/openai/swarm.git
 # Blockchain
 solana            # Solana blockchain interaction
 anchorpy          # Solana smart contract integration
@@ -12,11 +12,12 @@ web3              # Ethereum interaction (optional)
 moccasin          # Ethereum smart contract integration (optional)
 boa
 solana-agentkit   # Solana agent development
+cdp_agentkit_core
 # Trading and Finance
 ta                # Technical analysis
 ccxt              # Crypto exchange integration
 jupiter-python    # Jupiter aggregator SDK
-
+rsa
 # Social Media
 tweepy            # Twitter API
 discord.py        # Discord bot

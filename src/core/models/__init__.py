@@ -1,3 +1,3 @@
 from .claude import ClaudeAI
 
-__all__ = ['ClaudeAI']
+__all__ = ["ClaudeAI"]
