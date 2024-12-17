@@ -6,7 +6,6 @@ from web3 import Web3
 from typing import Dict, List, Optional, Union
 import logging
 from decimal import Decimal
-from web3 import Web3
 
 # from zksync2.zksync_builder import ZkSyncBuilder
 logger = logging.getLogger(__name__)

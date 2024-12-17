@@ -48,7 +48,11 @@ class Context:
 class ContextManager:
     """Manages agent's context and memory"""
 
-    def __init__(self, memory_limit: int = 1000, context_ttl: int = 3600):  # seconds
+    def __init__(
+        self,
+        memory_limit: int = 1000,
+        context_ttl: int = 3600,  # seconds
+    ):
         self.memory_limit = memory_limit
         self.context_ttl = context_ttl
         self.current_context: Dict[ContextType, Context] = {}
@@ -78,11 +82,8 @@ class ContextManager:
                 priority=priority,
             )
 
-            # Store context
             self.current_context[context_type] = context
             self.context_history.append(context)
-
-            # Clean expired contexts
             await self._clean_expired_contexts()
 
             return context
@@ -91,7 +92,10 @@ class ContextManager:
             logger.error(f"Error adding context: {e}")
             raise
 
-    async def get_context(self, context_type: ContextType) -> Optional[Context]:
+    async def get_context(
+        self,
+        context_type: ContextType,
+    ) -> Optional[Context]:
         """Get current context of specified type"""
         if context_type not in self.current_context:
             return None
@@ -124,11 +128,9 @@ class ContextManager:
 
             self.memory_store.append(memory)
 
-            # Maintain memory limit
             if len(self.memory_store) > self.memory_limit:
-                # Remove least important memories
                 self.memory_store.sort(key=lambda x: x.importance)
-                self.memory_store = self.memory_store[-self.memory_limit:]
+                # self.memory_store = self.memory_store[-self.memory_limit :]
 
             return memory
 
@@ -160,7 +162,10 @@ class ContextManager:
 
         return memories
 
-    async def merge_contexts(self, context_types: List[ContextType]) -> Dict[str, Any]:
+    async def merge_contexts(
+        self,
+        context_types: List[ContextType],
+    ) -> Dict[str, Any]:
         """Merge multiple contexts"""
         merged = {}
         for context_type in context_types:
@@ -170,7 +175,7 @@ class ContextManager:
 
         return merged
 
-    async def _clean_expired_contexts(self):
+    async def _clean_expired_contexts(self) -> None:
         """Remove expired contexts"""
         now = datetime.now()
         expired = []
@@ -183,7 +188,8 @@ class ContextManager:
             del self.current_context[context_type]
 
     async def summarize_context(
-        self, context_type: Optional[ContextType] = None
+        self,
+        context_type: Optional[ContextType] = None,
     ) -> Dict[str, Any]:
         """Get context summary"""
         summary = {
@@ -205,7 +211,9 @@ class ContextManager:
         return summary
 
     async def get_context_history(
-        self, context_type: Optional[ContextType] = None, limit: Optional[int] = None
+        self,
+        context_type: Optional[ContextType] = None,
+        limit: Optional[int] = None,
     ) -> List[Context]:
         """Get context history"""
         history = self.context_history

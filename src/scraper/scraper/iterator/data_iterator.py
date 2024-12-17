@@ -1,9 +1,7 @@
-import random
 import re
 import sys
 import os
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -105,14 +103,14 @@ class DataIterator:
                 )
             else:
                 next_shift = normalized_df[column].shift(1)
-                normalized_df[column] = (
-                    np.log(normalized_df[column]) - np.log(next_shift)
+                normalized_df[column] = np.log(normalized_df[column]) - np.log(
+                    next_shift
                 )
                 min_col = normalized_df[column].min()
                 max_col = normalized_df[column].max()
-                normalized_df[column] = (
-                    normalized_df[column] - min_col
-                ) / (max_col - min_col)
+                normalized_df[column] = (normalized_df[column] - min_col) / (
+                    max_col - min_col
+                )
         clean_normalized_df = normalized_df.dropna()
         is_nan = clean_normalized_df.isna().sum()
         if is_nan.any():

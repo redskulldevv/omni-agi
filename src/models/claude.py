@@ -16,14 +16,6 @@ class ClaudeAI:
         max_tokens: int = 1000,
         temperature: float = 0.7,
     ):
-        """Initialize Claude API client
-
-        Args:
-            api_key: Anthropic API key
-            model: Model name to use
-            max_tokens: Maximum tokens in response
-            temperature: Response randomness (0-1)
-        """
         self.client = Anthropic(api_key=api_key)
         self.model = model
         self.max_tokens = max_tokens
@@ -38,38 +30,20 @@ class ClaudeAI:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
     ) -> str:
-        """Generate response from Claude
-
-        Args:
-            prompt: User prompt
-            system_prompt: Optional system instructions
-            context: Optional context information
-            temperature: Optional override for response temperature
-            max_tokens: Optional override for max tokens
-
-        Returns:
-            Generated response text
-        """
         try:
             messages = []
 
-            # Add system prompt if provided
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
 
-            # Add context if provided
             if context:
                 messages.append(
                     {"role": "system", "content": f"Context: {json.dumps(context)}"}
                 )
 
-            # Add conversation history
-            messages.extend(self.conversation_history[-5:])  # Last 5 messages
-
-            # Add current prompt
+            messages.extend(self.conversation_history[-5:])
             messages.append({"role": "user", "content": prompt})
 
-            # Generate response
             response = await self.client.messages.create(
                 model=self.model,
                 messages=messages,
@@ -77,7 +51,6 @@ class ClaudeAI:
                 temperature=temperature or self.temperature,
             )
 
-            # Store in history
             self.conversation_history.extend(
                 [
                     {"role": "user", "content": prompt},
@@ -92,31 +65,22 @@ class ClaudeAI:
             raise
 
     async def analyze_sentiment(self, text: str) -> Dict[str, Union[float, str]]:
-        """Analyze text sentiment
-
-        Args:
-            text: Text to analyze
-
-        Returns:
-            Dict with sentiment score and label
-        """
         try:
-            prompt = f"""
-            Analyze the sentiment of the following text and provide a score from -1.0 (very negative) to 1.0 (very positive).
-            Also provide a label (positive/negative/neutral).
-
-            Text: {text}
-
-            Respond in JSON format:
-            {{
-                "score": float,
-                "label": string
-            }}
-            """
+            prompt = (
+                "Analyze the sentiment of the following text and provide a score "
+                "from -1.0 (very negative) to 1.0 (very positive). "
+                "Also provide a label (positive/negative/neutral).\n\n"
+                f"Text: {text}\n\n"
+                "Respond in JSON format:\n"
+                "{\n"
+                '    "score": float,\n'
+                '    "label": string\n'
+                "}"
+            )
 
             response = await self.generate_response(
                 prompt=prompt,
-                temperature=0.1,  # Lower temperature for more consistent analysis
+                temperature=0.1,
             )
 
             return json.loads(response)
@@ -126,32 +90,21 @@ class ClaudeAI:
             raise
 
     async def analyze_market(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Analyze market conditions
-
-        Args:
-            context: Market context information
-
-        Returns:
-            Analysis results
-        """
         try:
-            # Create market analysis prompt
-            prompt = f"""
-            Analyze the following market conditions and provide insights:
-
-            Context: {json.dumps(context, indent=2)}
-
-            Provide:
-            1. Overall market sentiment
-            2. Key trends
-            3. Risk assessment
-            4. Recommendations
-
-            Respond in JSON format.
-            """
+            prompt = (
+                "Analyze the following market conditions and provide insights:\n\n"
+                f"Context: {json.dumps(context, indent=2)}\n\n"
+                "Provide:\n"
+                "1. Overall market sentiment\n"
+                "2. Key trends\n"
+                "3. Risk assessment\n"
+                "4. Recommendations\n\n"
+                "Respond in JSON format."
+            )
 
             response = await self.generate_response(
-                prompt=prompt, temperature=0.3  # Lower temperature for analysis
+                prompt=prompt,
+                temperature=0.3,
             )
 
             return json.loads(response)
@@ -161,34 +114,26 @@ class ClaudeAI:
             raise
 
     async def generate_social_post(
-        self, topic: str, style: str, max_length: int = 280
+        self,
+        topic: str,
+        style: str,
+        max_length: int = 280,
     ) -> str:
-        """Generate social media post
-
-        Args:
-            topic: Post topic
-            style: Writing style
-            max_length: Maximum length
-
-        Returns:
-            Generated post text
-        """
         try:
-            prompt = f"""
-            Generate a {style} social media post about: {topic}
-
-            Requirements:
-            - Maximum length: {max_length} characters
-            - Style: {style}
-            - Include relevant hashtags
-            - Be engaging and informative
-            """
-
-            response = await self.generate_response(
-                prompt=prompt, max_tokens=max_length // 2  # Conservative token limit
+            prompt = (
+                f"Generate a {style} social media post about: {topic}\n\n"
+                "Requirements:\n"
+                f"- Maximum length: {max_length} characters\n"
+                f"- Style: {style}\n"
+                "- Include relevant hashtags\n"
+                "- Be engaging and informative"
             )
 
-            # Ensure length limit
+            response = await self.generate_response(
+                prompt=prompt,
+                max_tokens=max_length // 2,
+            )
+
             if len(response) > max_length:
                 response = response[: max_length - 3] + "..."
 
@@ -198,22 +143,15 @@ class ClaudeAI:
             logger.error(f"Error generating social post: {e}")
             raise
 
-    def clear_history(self):
+    def clear_history(self) -> None:
         """Clear conversation history"""
         self.conversation_history = []
 
     async def get_embedding(self, text: str) -> List[float]:
-        """Get text embedding
-
-        Args:
-            text: Text to embed
-
-        Returns:
-            Embedding vector
-        """
         try:
             response = await self.client.embeddings.create(
-                model="claude-3-embedding", input=text
+                model="claude-3-embedding",
+                input=text,
             )
 
             return response.embedding

@@ -1,6 +1,6 @@
 from script._setup_script import setup_script
 import boa
-from moccasin.config import get_active_network, get_config, _Networks
+from moccasin.config import get_active_network
 from boa.contracts.abi.abi_contract import ABIContract
 
 
@@ -161,7 +161,10 @@ def rebalance(
 
         print("Time to swap!")
         print(
-            f"Let's swap {amount_in / (10 ** trades_token_to_sell["contract"].decimals())} {trades_token_to_sell["contract"].symbol()} for at least {amount_out / (10 ** trades_token_to_buy["contract"].decimals())} {trades_token_to_buy["contract"].symbol()}"
+            f"Let's swap {amount_in / (10 ** trades_token_to_sell['contract'].decimals())} "
+            f"{trades_token_to_sell['contract'].symbol()} for at least "
+            f"{amount_out / (10 ** trades_token_to_buy['contract'].decimals())} "
+            f"{trades_token_to_buy['contract'].symbol()}"
         )
         amount_out = swap_exact_input_single(
             swap_router=uniswap_swap_router,

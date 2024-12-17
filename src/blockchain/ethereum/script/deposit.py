@@ -41,14 +41,16 @@ def run_deposit_script(usdc, weth):
         ltv,
         healthFactor,
     ) = pool_contract.getUserAccountData(boa.env.eoa)
-    print(f"""User account data:
+    print(
+        f"""User account data:
         totalCollateralBase: {totalCollateralBase}
         totalDebtBase: {totalDebtBase}
         availableBorrowsBase: {availableBorrowsBase}
         currentLiquidationThreshold: {currentLiquidationThreshold}
         ltv: {ltv}
         healthFactor: {healthFactor}
-          """)
+          """
+    )
 
 
 def moccasin_main():
