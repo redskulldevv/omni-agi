@@ -3,7 +3,7 @@ import logging
 from typing import Dict, List
 
 # Core services
-from communication.social.twitter import TwitterService
+from communication.social.twitter import TwitterClient
 from blockchain.solana.wallet import SolanaWallet
 from blockchain.ethereum.wallet import ZkWallet
 from utils.config import Config
@@ -123,7 +123,7 @@ class AIVentureCapitalist:
             twitter_config = self.security.decrypt_config(
                 self.config.get("twitter_config")
             )
-            self.twitter_service = TwitterService(
+            self.twitter_service = TwitterClient(
                 config=twitter_config, security_provider=self.security
             )
 
