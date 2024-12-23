@@ -1,0 +1,161 @@
+# Agent Configuration
+
+# Core Agent Settings
+agent:
+  name: "OmniAGI"
+  version: "1.0.0"
+  environment: "production"  # production, development, testing
+  log_level: "INFO"
+  debug_mode: false
+
+# AI Models Configuration
+ai_models:
+  claude:
+    model: "claude-3-opus-20240229"
+    max_tokens: 2000
+    temperature: 0.7
+    timeout: 30
+    retries: 3
+  groq:
+    model: "mixtral-8x7b-32768"
+    max_tokens: 1500
+    temperature: 0.5
+    timeout: 20
+    retries: 3
+
+# Blockchain Settings
+blockchain:
+  solana:
+    rpc_url: "${SOLANA_RPC_URL}"
+    commitment: "confirmed"
+    max_retries: 3
+    websocket_enabled: true
+    transaction_timeout: 60
+    priority_fee_level: "medium"  # low, medium, high
+    networks:
+      - mainnet
+      - devnet
+  ethereum:
+    rpc_url: "${ETH_RPC_URL}"
+    chain_id: 1
+    gas_settings:
+      max_gas_limit: 500000
+      priority_fee: "auto"
+      max_fee_per_gas: "auto"
+    networks:
+      - mainnet
+      - goerli
+
+# Portfolio Management
+portfolio:
+  allocations:
+    max_per_token: 0.20
+    max_per_sector: 0.40
+    min_position: 0.01
+  rebalancing:
+    threshold: 0.05
+    frequency: "daily"
+    max_slippage: 0.01
+  risk_management:
+    max_drawdown: 0.15
+    stop_loss: 0.10
+    take_profit: 0.30
+    var_confidence: 0.95
+
+# Trading Strategy
+trading:
+  execution:
+    default_dex: "jupiter"
+    backup_dexes: ["orca", "raydium"]
+    max_slippage: 0.01
+    min_liquidity: 100000
+  analysis:
+    timeframes: ["5m", "15m", "1h", "4h", "1d"]
+    indicators:
+      - type: "RSI"
+        period: 14
+        overbought: 70
+        oversold: 30
+      - type: "MACD"
+        fast_period: 12
+        slow_period: 26
+        signal_period: 9
+      - type: "Bollinger"
+        period: 20
+        std_dev: 2
+
+# Communication & Social
+communication:
+  discord:
+    channels:
+      announcements: "${DISCORD_ANNOUNCE_CHANNEL}"
+      trading: "${DISCORD_TRADING_CHANNEL}"
+      community: "${DISCORD_COMMUNITY_CHANNEL}"
+    message_interval: 300
+    max_daily_messages: 100
+  twitter:
+    post_interval: 3600
+    max_daily_posts: 24
+    engagement:
+      min_followers: 100
+      min_engagement: 0.02
+  api:
+    host: "0.0.0.0"
+    port: 8000
+    rate_limit: 100
+    timeout: 30
+
+# Research & Analysis
+research:
+  market_analysis:
+    update_interval: 300
+    data_sources:
+      - "coingecko"
+      - "defillama"
+      - "birdeye"
+    metrics:
+      - "price"
+      - "volume"
+      - "liquidity"
+      - "social_sentiment"
+  competitor_analysis:
+    update_frequency: "daily"
+    min_market_cap: 1000000
+    min_volume: 100000
+
+# Memory & Learning
+memory:
+  storage:
+    max_size: "1GB"
+    cleanup_interval: "24h"
+    retention_period: "30d"
+  context:
+    max_items: 1000
+    priority_threshold: 0.7
+
+# Security Settings
+security:
+  max_transaction_size: 100000
+  suspicious_patterns:
+    - pattern: "large_withdrawal"
+      threshold: 50000
+    - pattern: "rapid_trades"
+      threshold: 10
+  authorization:
+    required_signatures: 2
+    timeout: 300
+    max_attempts: 3
+
+# Performance Monitoring
+monitoring:
+  metrics_interval: 60
+  alert_thresholds:
+    cpu_usage: 80
+    memory_usage: 80
+    error_rate: 0.01
+  reporting:
+    enabled: true
+    interval: "1h"
+    formats:
+      - "json"
+      - "csv"

@@ -1,50 +1,42 @@
-api:
-  version: "1.0"
-  port: 8000
-  host: "0.0.0.0"
-  debug: false
-  rate_limit:
-    max_requests: 100
-    timeframe: 60  # seconds
+agent:
+  name: "OmniAGI"
+  version: "1.0.0"
+  mode: "production"  # development, production
 
 ai:
-  models:
-    primary: "claude-3-opus-20240229"
-    fallback: "mixtral-8x7b-32768"
-  parameters:
+  claude:
+    model: "claude-3-opus-20240229"
+    max_tokens: 2000
+  groq:
+    model: "mixtral-8x7b-32768"
     temperature: 0.7
-    max_tokens: 1000
-    context_window: 5
-    cache_responses: true
 
 blockchain:
-  networks:
-    solana:
-      rpc_url: "${SOLANA_RPC_URL}"
-      ws_url: "${SOLANA_WS_URL}"
-      commitment: "confirmed"
-    ethereum:
-      rpc_url: "${ETH_RPC_URL}"
-      chain_id: 1
+  solana:
+    rpc_url: "${SOLANA_RPC_URL}"
+    commitment: "confirmed"
+    max_retries: 3
+  ethereum:
+    rpc_url: "${ETH_RPC_URL}"
+    chain_id: 1
+    gas_limit: 500000
 
-social:
-  twitter:
-    api_version: 2
-    tweet_limit: 10
-    monitor_mentions: true
+investment:
+  portfolio:
+    max_position_size: 0.2
+    min_position_size: 0.01
+    rebalance_threshold: 0.05
+  risk:
+    max_drawdown: 0.15
+    var_confidence: 0.95
+    correlation_threshold: 0.7
+
+communication:
   discord:
-    command_prefix: "!"
-    guild_id: "${DISCORD_GUILD_ID}"
-
-logging:
-  level: "INFO"
-  file: "logs/agent.log"
-  max_size: 10485760  # 10MB
-  backup_count: 5
-
-security:
-  api_keys:
-    valid_duration: 3600
-    max_active: 10
-  rate_limiting: true
-  ip_whitelist: []
+    channels:
+      announcements: "${DISCORD_ANNOUNCE_CHANNEL}"
+      trading: "${DISCORD_TRADING_CHANNEL}"
+      community: "${DISCORD_COMMUNITY_CHANNEL}"
+  twitter:
+    post_interval: 3600
+    max_daily_posts: 24

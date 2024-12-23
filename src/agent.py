@@ -1,6 +1,10 @@
 import asyncio
 import logging
 from typing import Dict, List
+from typing import Dict, List
+import asyncio
+import logging
+from blockchain.solana.wallet import SolanaWallet
 
 # Core services
 from communication.social.twitter import TwitterClient
@@ -22,47 +26,133 @@ from community.engagement import DiscordManager
 from research.market_research import TrendAnalysis
 from utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+"""
+Core Agent Implementation
+Integrates all components and provides main agent functionality.
+"""
+
+import asyncio
+from typing import Dict, List, Optional
+from dataclasses import dataclass
+import yaml
+import logging
+
+# AI Models
+from models.claude import ClaudeModel
+from models.groq import GroqModel
+
+# Blockchain
+from blockchain.solana.wallet import SolanaWallet
+from blockchain.ethereum.wallet import EthereumWallet
+from blockchain.solana.trades import SolanaTrades
+from blockchain.ethereum.transactions import EthereumTransactions
+
+# Cognition
+from cognition.memory import MemorySystem
+from cognition.reasoning import ReasoningEngine
+from cognition.context import ContextManager
+from cognition.goals import GoalManager
+from cognition.learning import LearningSystem
+
+# Communication
+from communication.social.discord import DiscordManager
+from communication.social.twitter import TwitterManager
+from communication.interfaces.api import APIServer
+from communication.interfaces.chat import ChatInterface
+
+# Community
+from community.content.generator import ContentGenerator
+from community.content.scheduler import ContentScheduler
+from community.engagement.discord_manager import DiscordCommunityManager
+from community.engagement.twitter_manager import TwitterCommunityManager
+from community.growth.campaigns import CampaignManager
+from community.growth.metrics_tracker import GrowthMetricsTracker
+
+# Investment
+from investment.analysis.market_analysis import MarketAnalyzer
+from investment.analysis.sentiment_analysis import SentimentAnalyzer
+from investment.portfolio.allocation import PortfolioAllocator
+from investment.portfolio.risk_management import RiskManager
+from investment.strategy.entry_exit import EntryExitStrategy
+
+# Research
+from research.data_analysis.metrics_analysis import MetricsAnalyzer
+from research.market_research.competitor_analysis import CompetitorAnalyzer
+from research.market_research.trend_analysis import TrendAnalyzer
+from research.reports.report_generator import ReportGenerator
+
+# Tokenomics
+from tokenomics.creation.token_generator import TokenGenerator
+from tokenomics.liquidity.pool_management import PoolManager
+from tokenomics.revenue.fee_collection import FeeCollector
+
+# Utils
+from utils.config import ConfigLoader
+from utils.logger import setup_logger
+from utils.security import SecurityManager
+
+# Part 1: Core Agent Implementation
+import asyncio
+import logging
+from typing import Dict, List
+from dataclasses import dataclass
+import yaml
+
+# Keep existing imports, add only new ones
+from models import Claude, Groq
+from utils.config import Config, ConfigLoader
+from utils.security import Security, SecurityError
+from utils.logger import setup_logger
 
 
-class AIVentureCapitalist:
-    """
-    Multi-chain AI Venture Capitalist agent with enhanced security and social features.
-    """
+@dataclass
+class AgentConfig:
+    name: str
+    personality_path: str
+    settings_path: str
+    api_keys: Dict[str, str]
 
-    def __init__(self, config_path: str):
-        # Load configuration
-        self.config = Config(config_path)
-        self.security = Security(self.config.security_settings)
-        self.logger = setup_logger("ai_vc_agent")
 
-        # Initialize core components
+class Agent:
+    def __init__(self, config: AgentConfig):
+        self.config = config
+        self.logger = setup_logger(config.name)
+
+        # Load configurations
+        self.settings = self._load_settings()
+        self.personality = self._load_personality()
+
+        # Initialize components
+        self._initialize_components()
+
+    def _initialize_components(self):
+        """Initialize all agent components"""
+        # AI Models
+        self.claude = Claude(self.config.api_keys["claude"])
+        self.groq = Groq(self.config.api_keys["groq"])
+
+        # Initialize wallets
         self._initialize_wallets()
+
+        # Initialize other components
         self._initialize_core_components()
         self._initialize_investment_components()
         self._initialize_community_components()
 
-        # State management
-        self.active_investments: Dict = {}
-        self.deal_pipeline: List = []
-        self.performance_metrics: Dict = {}
-
     def _initialize_wallets(self):
         """Initialize multi-chain wallet infrastructure"""
         try:
-            # Initialize wallet with security checks
             solana_config = self.security.decrypt_config(
-                self.config.get("solana_wallet_config")
+                self.settings["solana_wallet_config"]
             )
             ethereum_config = self.security.decrypt_config(
-                self.config.get("ethereum_wallet_config")
+                self.settings["ethereum_wallet_config"]
             )
 
             self.solana_wallet = SolanaWallet(
                 config=solana_config, security_provider=self.security
             )
-
-            self.zk_wallet = ZkWallet(
+            self.ethereum_wallet = EthereumWallet(
                 config=ethereum_config, security_provider=self.security
             )
 
@@ -72,128 +162,90 @@ class AIVentureCapitalist:
             raise
 
     def _initialize_core_components(self):
-        """Initialize core AI and blockchain components"""
         try:
-            # AI Models
-            self.claude = Claude(
-                api_key=self.security.decrypt_key(self.config.get("claude_api_key"))
-            )
-            self.groq = Groq(
-                api_key=self.security.decrypt_key(self.config.get("groq_api_key"))
-            )
+            # Cognition
+            self.memory = MemorySystem()
+            self.reasoning = ReasoningEngine()
+            self.context = ContextManager()
+            self.goals = GoalManager()
+            self.learning = LearningSystem()
 
-            # Trading and Tokens
-            self.solana_trades = Trades(self.solana_wallet)
-            self.tokens = Tokens()
+            # Analysis
+            self.market_analyzer = MarketAnalyzer()
+            self.sentiment_analyzer = SentimentAnalyzer()
 
             self.logger.info("Core components initialized successfully")
         except Exception as e:
             self.logger.error(f"Failed to initialize core components: {e}")
             raise
 
-    def _initialize_investment_components(self):
-        """Initialize investment and analysis components"""
+    async def start(self):
+        """Start the agent and all its components"""
         try:
-            # Portfolio Management
-            self.portfolio = Allocation(self.config.get("portfolio_config"))
-            self.risk_manager = RiskManagement(self.config.get("risk_config"))
+            self.logger.info("Starting agent...")
+            await self._initialize_systems()
 
-            # Analysis
-            self.market_analysis = MarketAnalysis()
-            self.sentiment_analysis = SentimentAnalysis()
-
-            # Deal Flow
-            self.project_scanner = ProjectScanner()
-            self.team_analyzer = TeamAnalysis()
-            self.tech_analyzer = TechAnalysis()
-
-            # Token Management
-            self.token_generator = TokenGenerator()
-            self.pool_manager = PoolManagement()
-
-            self.logger.info("Investment components initialized successfully")
+            await asyncio.gather(
+                self._run_cognition_loop(),
+                self._run_investment_loop(),
+                self._run_community_loop(),
+                self._run_research_loop(),
+            )
         except Exception as e:
-            self.logger.error(f"Failed to initialize investment components: {e}")
+            self.logger.error(f"Error starting agent: {e}")
             raise
 
-    def _initialize_community_components(self):
-        """Initialize community and social components with enhanced security"""
+    async def process_input(self, input_data: Dict) -> Dict:
         try:
-            # Initialize Twitter service with security
-            twitter_config = self.security.decrypt_config(
-                self.config.get("twitter_config")
-            )
-            self.twitter_service = TwitterClient(
-                config=twitter_config, security_provider=self.security
-            )
-
-            # Initialize other community components
-            self.discord_manager = DiscordManager(
-                config=self.security.decrypt_config(self.config.get("discord_config"))
-            )
-            self.trend_analyzer = TrendAnalysis()
-
-            self.logger.info("Community components initialized successfully")
+            context = await self.context.update(input_data)
+            reasoning = await self.reasoning.analyze(input_data, context)
+            response = await self._generate_response(reasoning)
+            await self.memory.store(input_data, response, context)
+            return response
         except Exception as e:
-            self.logger.error(f"Failed to initialize community components: {e}")
-            raise
+            self.logger.error(f"Error processing input: {e}")
+            return {"error": str(e)}
 
-    async def execute_cross_chain_investment(self, decision: Dict):
-        """Execute investment decisions across multiple chains"""
-        try:
-            chain = decision.get("chain", "solana")
+    def _load_settings(self) -> Dict:
+        with open(self.config.settings_path) as f:
+            return yaml.safe_load(f)
 
-            # Select appropriate wallet based on chain
-            wallet = self.solana_wallet if chain == "solana" else self.zk_wallet
+    def _load_personality(self) -> Dict:
+        with open(self.config.personality_path) as f:
+            return yaml.safe_load(f)
+        # Part 2: Investment and Execution Logic
 
-            # Verify transaction security
-            if not self.security.verify_transaction(decision, wallet):
-                raise SecurityError("Transaction failed security verification")
 
-            if decision["action"] == "invest":
-                tx_hash = await wallet.execute_investment(
-                    token=decision["token"],
-                    amount=decision["amount"],
-                    strategy=decision["strategy"],
-                )
+class Agent(Agent):  # Continues from Part 1
+    async def _run_investment_loop(self):
+        """Run the investment management loop"""
+        while True:
+            try:
+                # Analyze market
+                market_data = await self._analyze_market()
 
-                # Log transaction with security audit
-                await self.security.audit_transaction(
-                    tx_hash=tx_hash, wallet=wallet, action="invest", details=decision
-                )
+                # Check portfolio and execute trades
+                await self._manage_portfolio(market_data)
 
-            elif decision["action"] == "exit":
-                tx_hash = await wallet.execute_exit(
-                    token=decision["token"], strategy=decision["strategy"]
-                )
+                # Scan for new opportunities
+                await self._scan_opportunities()
 
-                await self.security.audit_transaction(
-                    tx_hash=tx_hash, wallet=wallet, action="exit", details=decision
-                )
-
-            # Notify through social channels
-            await self._notify_investment_action(decision)
-
-        except Exception as e:
-            self.logger.error(f"Failed to execute cross-chain investment: {e}")
-            await self.security.log_security_event(
-                event_type="investment_failure",
-                details={"error": str(e), "decision": decision},
-            )
+                await asyncio.sleep(self.settings["investment"]["scan_interval"])
+            except Exception as e:
+                self.logger.error(f"Error in investment loop: {e}")
 
     async def _analyze_market(self):
         """Analyze market conditions with security checks"""
         try:
             # Verify data sources
             if not self.security.verify_data_sources(
-                [self.market_analysis, self.sentiment_analysis]
+                [self.market_analyzer, self.sentiment_analyzer]
             ):
                 raise SecurityError("Data source verification failed")
 
-            market_data = await self.market_analysis.get_market_overview()
-            sentiment_data = await self.sentiment_analysis.analyze_social_sentiment()
+            market_data = await self.market_analyzer.get_market_overview()
+            sentiment_data = await self.sentiment_analyzer.analyze_social_sentiment()
 
-            # Analyze with security context
             with self.security.analysis_context() as context:
                 investment_decision = await self.groq.analyze(
                     prompt="market_analysis",
@@ -206,64 +258,152 @@ class AIVentureCapitalist:
                 )
 
             if investment_decision.get("action_required"):
-                await self.execute_cross_chain_investment(investment_decision)
+                await self.execute_trade(investment_decision)
+
+            return market_data
 
         except Exception as e:
             self.logger.error(f"Market analysis error: {e}")
             await self.security.handle_analysis_error(e)
+            return None
 
-    async def _notify_investment_action(self, decision: Dict):
-        """Notify stakeholders through secure channels"""
+    async def execute_trade(self, trade_params: Dict) -> Dict:
+        """Execute a trade based on strategy signals"""
         try:
-            # Prepare secure notification
-            notification = self.security.prepare_notification(decision)
+            # Validate trade
+            validated = await self.risk_manager.validate_trade(trade_params)
+            if not validated["approved"]:
+                return {"status": "rejected", "reason": validated["reason"]}
+
+            # Execute trade on appropriate chain
+            if trade_params["chain"] == "solana":
+                result = await self.solana_wallet.execute_trade(trade_params)
+            else:
+                result = await self.ethereum_wallet.execute_trade(trade_params)
+
+            # Update portfolio and notify
+            await self.portfolio.update(result)
+            await self._notify_trade(result)
+
+            return result
+        except Exception as e:
+            self.logger.error(f"Error executing trade: {e}")
+            return {"error": str(e)}
+
+    async def _manage_portfolio(self, market_data: Dict):
+        """Manage portfolio and active investments"""
+        try:
+            # Verify portfolio security
+            if not self.security.verify_portfolio(self.active_investments):
+                raise SecurityError("Portfolio verification failed")
+
+            portfolio_status = await self.portfolio.check_status(
+                self.active_investments, market_data
+            )
+
+            if portfolio_status["needs_rebalancing"]:
+                await self.portfolio.rebalance(self.active_investments)
+
+        except Exception as e:
+            self.logger.error(f"Portfolio management error: {e}")
+            await self.security.handle_portfolio_error(e)
+
+    async def _run_community_loop(self):
+        """Manage community engagement and social presence"""
+        while True:
+            try:
+                # Generate and post content
+                content = await self.content_generator.generate_content()
+                await self.content_scheduler.schedule_content(content)
+
+                # Engage with community
+                await self.discord_manager.process_messages()
+                await self.twitter_manager.process_mentions()
+
+                # Track metrics
+                await self.growth_tracker.update_metrics()
+
+                await asyncio.sleep(self.settings["community"]["update_interval"])
+            except Exception as e:
+                self.logger.error(f"Error in community loop: {e}")
+
+    async def _notify_trade(self, trade_result: Dict):
+        """Notify stakeholders of trade execution"""
+        try:
+            notification = self.security.prepare_notification(trade_result)
 
             await asyncio.gather(
-                self.twitter_service.post_update(notification),
+                self.twitter_manager.post_update(notification),
                 self.discord_manager.send_update(notification),
             )
 
-            # Log social engagement
             await self.security.log_social_activity(
                 {
                     "platform": ["twitter", "discord"],
-                    "action": "investment_notification",
+                    "action": "trade_notification",
                     "details": notification,
                 }
             )
 
         except Exception as e:
-            self.logger.error(f"Failed to notify investment action: {e}")
+            self.logger.error(f"Failed to notify trade: {e}")
             await self.security.handle_notification_error(e)
 
-    async def run(self):
-        """Main agent loop with security monitoring"""
-        self.logger.info("Starting AI VC Agent")
-
-        # Start security monitoring
-        security_monitor = asyncio.create_task(
-            self.security.monitor_agent_activity(self)
-        )
-
+    async def _run_research_loop(self):
+        """Run research and analysis tasks"""
         while True:
             try:
-                await asyncio.gather(
-                    self._analyze_market(),
-                    self._manage_portfolio(),
-                    self._scan_opportunities(),
-                    self._manage_community(),
-                    self._monitor_performance(),
-                    security_monitor,  # Await security monitoring task
+                # Analyze market trends
+                trends = await self.trend_analyzer.analyze_trends()
+
+                # Analyze competition
+                competition = await self.competitor_analyzer.analyze_competitors()
+
+                # Generate reports
+                report = await self.report_generator.generate_report(
+                    {
+                        "trends": trends,
+                        "competition": competition,
+                        "portfolio": self.active_investments,
+                    }
                 )
-                await asyncio.sleep(self.config.get("loop_interval", 60))
+
+                # Store research results
+                await self.memory.store_research(report)
+
+                await asyncio.sleep(self.settings["research"]["interval"])
             except Exception as e:
-                self.logger.error(f"Error in main loop: {e}")
-                await self.security.handle_critical_error(e)
-                await asyncio.sleep(10)
+                self.logger.error(f"Error in research loop: {e}")
+
+    async def _scan_opportunities(self):
+        """Scan for new investment opportunities"""
+        try:
+            opportunities = await self.project_scanner.scan_projects()
+
+            for opportunity in opportunities:
+                # Evaluate project
+                market_fit = await self.market_analyzer.analyze_fit(opportunity)
+                team_score = await self.team_analyzer.analyze_team(opportunity)
+                tech_score = await self.tech_analyzer.analyze_tech(opportunity)
+
+                # Make investment decision
+                if self._evaluate_opportunity(market_fit, team_score, tech_score):
+                    await self.execute_investment(opportunity)
+
+        except Exception as e:
+            self.logger.error(f"Error scanning opportunities: {e}")
 
 
 if __name__ == "__main__":
     config_path = "config/agent_config.yaml"
-    agent = AIVentureCapitalist(config_path)
+    config = Config(config_path)
+    agent = Agent(
+        AgentConfig(
+            name=config.get("agent_name"),
+            personality_path=config.get("personality_path"),
+            settings_path=config.get("settings_path"),
+            api_keys=config.get("api_keys"),
+        )
+    )
 
-    asyncio.run(agent.run())
+    asyncio.run(agent.start())

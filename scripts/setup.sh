@@ -1,143 +1,54 @@
-# scripts/setup.sh
 #!/bin/bash
 
-echo "Starting setup process..."
+# Color definitions
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Required tools
-REQUIRED_TOOLS="python3 pip git"
+# Function to print colored output
+print_status() {
+    echo -e "${GREEN}[+]${NC} $1"
+}
 
-# Check required tools
-for tool in $REQUIRED_TOOLS; do
-    if ! command -v $tool &> /dev/null; then
-        echo "Error: $tool is required but not installed"
-        exit 1
-    fi
-done
+print_warning() {
+    echo -e "${YELLOW}[!]${NC} $1"
+}
 
-# Create project structure
-mkdir -p src/{ai,blockchain,cognition,personality,models,utils}
-mkdir -p config
-mkdir -p logs
-mkdir -p tests
-
-# Create .env template if doesn't exist
-if [ ! -f ".env" ]; then
-    cat > .env << EOF
-# AI Configuration
-CLAUDE_API_KEY=
-GROQ_API_KEY=
-
-# Blockchain Configuration
-SOLANA_RPC_URL=
-HELIUS_API_KEY=
-
-# Social Media Configuration
-TWITTER_API_KEY=
-DISCORD_BOT_TOKEN=
-
-# Database Configuration
-REDIS_URL=
-
-# Agent Configuration
-AGENT_NAME=
-LOG_LEVEL=INFO
-EOF
-    echo "Created .env template"
-fi
-
-# Create configuration files
-if [ ! -f "config/settings.yaml" ]; then
-    cat > config/settings.yaml << EOF
-api:
-  port: 8000
-  host: "0.0.0.0"
-  debug: false
-
-ai:
-  primary_model: "claude-3-opus"
-  temperature: 0.7
-  max_tokens: 1000
-
-blockchain:
-  network: "mainnet-beta"
-  commitment: "confirmed"
-
-logging:
-  level: "INFO"
-  file: "agent.log"
-EOF
-    echo "Created settings.yaml template"
-fi
-
-# Initialize git repository if not already initialized
-if [ ! -d ".git" ]; then
-    git init
-    echo "Initialized git repository"
-fi
-
-# Create .gitignore
-if [ ! -f ".gitignore" ]; then
-    cat > .gitignore << EOF
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.env
-
-# Logs
-logs/
-*.log
-
-# IDE
-.vscode/
-.idea/
-
-# Project specific
-config/*.yaml
-!config/settings.yaml.example
-EOF
-    echo "Created .gitignore"
-fi
+print_error() {
+    echo -e "${RED}[-]${NC} $1"
+}
 
 # Create virtual environment
-echo "Creating Python virtual environment..."
+print_status "Setting up Python virtual environment..."
 python3 -m venv venv
 source venv/bin/activate
 
+# Upgrade pip
+print_status "Upgrading pip..."
+pip install --upgrade pip
+
 # Install dependencies
-echo "Installing dependencies..."
+print_status "Installing project dependencies..."
 pip install -r requirements.txt
 
 # Set up pre-commit hooks
-if [ ! -f ".pre-commit-config.yaml" ]; then
-    cat > .pre-commit-config.yaml << EOF
-repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-    -   id: check-yaml
-    -   id: check-added-large-files
+print_status "Setting up pre-commit hooks..."
+pre-commit install
 
--   repo: https://github.com/psf/black
-    rev: 23.3.0
-    hooks:
-    -   id: black
-
--   repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
-    hooks:
-    -   id: flake8
-EOF
-    echo "Created pre-commit configuration"
-    pip install pre-commit
-    pre-commit install
+# Create .env file from example
+if [ ! -f .env ]; then
+    cp .env.example .env
+    print_status "Created .env file. Please update with your API keys."
 fi
 
-echo "Running initial tests..."
-python -m pytest tests/
+# Final setup message
+echo -e "\n${GREEN}Setup complete!${NC}"
+echo -e "\n${YELLOW}Don't forget to:${NC}"
+echo "1. Update your .env file with your API keys"
+echo "2. Configure your RPC endpoints"
+echo "3. Set up your Discord bot"
 
-echo "Setup complete!"
-echo "Please update .env with your configuration values"
+# Activation reminder
+echo -e "\n${GREEN}To activate your virtual environment:${NC}"
+echo "source venv/bin/activate"

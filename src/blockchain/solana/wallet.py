@@ -1,8 +1,18 @@
 # blockchain/solana/wallet.py
 
 import token
-from solana.rpc.async_api import AsyncClient
+from typing import Dict, Optional, Union
+import base58
+from solana.rpc.async_api import AsyncClient, Commitment
+from solana.rpc.api import Client
 from solana.transaction import Transaction
+from solana import Keypair
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+import logging
+import os
+import json
+from decimal import Decimal
 
 from solana_agentkit.utils.keypair import (
     create_keypair,
@@ -12,43 +22,28 @@ from solana_agentkit.utils.keypair import (
 from solana_agentkit.utils.send_tx import send_transaction
 from solana_agentkit.constants.constants import USDC_MINT, WSOL_MINT
 from solana_agentkit.tools import transfer, TransferParams
-from typing import Dict, Optional, Union
-from decimal import Decimal
-import logging
-import os
-import json
 
 logger = logging.getLogger(__name__)
 
 
 class SolanaWallet:
-    def __init__(
-        self,
-        rpc_url: str,
-        keypair: Optional[keypair] = None,
-        secret_key: Optional[str] = None,
-        private_key: Optional[str] = None,
-    ):
-        """Initialize Solana wallet
+    def __init__(self, rpc_url: str, private_key: Optional[str] = None):
+        self.client = Client(rpc_url)
+        self.keypair = self._initialize_keypair(private_key)
 
-        Args:
-            rpc_url: Solana RPC URL
-            keypair: Optional existing Keypair
-            secret_key: Optional secret key to generate Keypair
-            private_key: Optional private key to generate Keypair
-        """
-        self.client = AsyncClient(rpc_url)
-
-        if keypair:
-            self.keypair = keypair
-        elif secret_key:
-            self.keypair = create_keypair_from_secret(secret_key)
-        elif private_key:
-            self.private_key = private_key
-        else:
-            self.keypair = create_keypair()
-
-        self.pubkey = str(self.keypair.public_key)
+    def _initialize_keypair(self, private_key: Optional[str] = None) -> Keypair:
+        """Initialize Solana keypair"""
+        try:
+            if private_key:
+                # Use existing private key
+                secret_key = base58.b58decode(private_key)
+                return Keypair.from_secret_key(secret_key)
+            else:
+                # Generate new keypair
+                return Keypair()
+        except Exception as e:
+            logger.error(f"Failed to initialize keypair: {e}")
+            raise
 
     @staticmethod
     def generate_wallet() -> "SolanaWallet":
@@ -65,54 +60,55 @@ class SolanaWallet:
             data = json.load(file)
         return SolanaWallet(private_key=data["private_key"])
 
-    async def get_balance(
-        self, token_mint: Optional[str] = None, address: Optional[str] = None
-    ) -> Decimal:
-        """Get SOL or token balance
-
-        Args:
-            token_mint: Optional token mint address
-            address: Optional address to check (defaults to wallet address)
-
-        Returns:
-            Balance as Decimal
-        """
+    async def get_balance(self) -> float:
+        """Get wallet SOL balance"""
         try:
-            address = address or self.pubkey
-
-            if not token_mint:
-                # Get SOL balance
-                balance = await self.client.get_balance(address)
-                return Decimal(balance.value) / Decimal(1e9)
-
-            # Get token balance
-            token_accounts = await self.client.get_token_accounts_by_owner(
-                owner=address,
-                opts={
-                    "mint": token_mint,
-                    "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-                },
+            response = await self.client.get_balance(
+                self.keypair.public_key, commitment=Commitment("confirmed")
             )
-
-            if not token_accounts.value:
-                return Decimal(0)
-
-            balance = int(
-                token_accounts.value[0].account.data["parsed"]["info"]["tokenAmount"][
-                    "amount"
-                ]
-            )
-            decimals = int(
-                token_accounts.value[0].account.data["parsed"]["info"]["tokenAmount"][
-                    "decimals"
-                ]
-            )
-
-            return Decimal(balance) / Decimal(10**decimals)
-
+            return response["result"]["value"] / 1e9  # Convert lamports to SOL
         except Exception as e:
-            logger.error(f"Error getting balance: {e}")
+            logger.error(f"Failed to get balance: {e}")
             raise
+
+    async def get_token_balance(self, token_address: str) -> Dict:
+        """Get specific token balance"""
+        try:
+            # Implement token balance check
+            pass
+        except Exception as e:
+            logger.error(f"Failed to get token balance: {e}")
+            raise
+
+    async def execute_transaction(self, transaction: Transaction) -> str:
+        """Execute a Solana transaction"""
+        try:
+            # Sign transaction
+            transaction.sign(self.keypair)
+
+            # Send transaction
+            response = await self.client.send_transaction(
+                transaction, self.keypair, opts={"skip_preflight": True}
+            )
+
+            return response["result"]
+        except Exception as e:
+            logger.error(f"Failed to execute transaction: {e}")
+            raise
+
+    async def execute_trade(self, params: Dict) -> Dict:
+        """Execute a trade with given parameters"""
+        try:
+            # Build transaction based on params
+            transaction = Transaction()
+
+            # Execute transaction
+            tx_hash = await self.execute_transaction(transaction)
+
+            return {"success": True, "tx_hash": tx_hash, "params": params}
+        except Exception as e:
+            logger.error(f"Failed to execute trade: {e}")
+            return {"success": False, "error": str(e), "params": params}
 
     async def get_all_balances(self) -> Dict[str, Decimal]:
         """Get all token balances including SOL
@@ -220,6 +216,7 @@ class SolanaWallet:
         mint_account = await self.client.get_account_info(token_mint)
         return mint_account.value.data["parsed"]["info"]["decimals"]
 
-    def get_public_key(self) -> str:
+    @property
+    def public_key(self) -> str:
         """Get wallet public key"""
-        return self.pubkey
+        return str(self.keypair.public_key)
