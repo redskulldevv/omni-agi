@@ -1,0 +1,21 @@
+distribution:
+  initial:
+    team: 15.0
+    treasury: 20.0
+    community: 30.0
+    liquidity: 25.0
+    advisors: 10.0
+  vesting:
+    team:
+      cliff: 12
+      duration: 36
+      interval: monthly
+    advisors:
+      cliff: 6
+      duration: 24
+      interval: monthly
+  emissions:
+    type: programmatic
+    rate: 2.0
+    decay: 0.85
+    interval: monthly

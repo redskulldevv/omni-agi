@@ -1,0 +1,25 @@
+strategy:
+  entry:
+    signals:
+      - type: technical
+        indicators:
+          - rsi
+          - macd
+          - moving_averages
+      - type: fundamental
+        metrics:
+          - tvl
+          - volume
+          - social_sentiment
+  exit:
+    conditions:
+      profit_target: 30.0
+      stop_loss: 15.0
+      trailing_stop: 10.0
+  portfolio:
+    rebalancing:
+      frequency: weekly
+      threshold: 5.0
+    diversification:
+      min_assets: 5
+      max_weight: 20.0

@@ -7,8 +7,8 @@ import logging
 from uuid import uuid4
 
 # Services imports
-from core.cognition.reasoning import ReasoningEngine
-from core.personality.traits import PersonalityManager
+from src.cognition.reasoning import ReasoningEngine
+from src.personality.traits import PersonalityManager
 from blockchain.solana.wallet import WalletService
 from communication.social.analytics import SocialAnalytics
 

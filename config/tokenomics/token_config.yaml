@@ -1,0 +1,24 @@
+token:
+  network: solana
+  metadata:
+    name: OmniToken
+    symbol: OMNI
+    decimals: 9
+  supply:
+    initial: 100000000
+    max: 1000000000
+  features:
+    burning: true
+    staking: true
+    governance: true
+  economics:
+    fee:
+      trading: 0.3
+      protocol: 0.1
+    rewards:
+      staking: 12.0
+      liquidity: 15.0
+  utility:
+    governance: true
+    fee_sharing: true
+    protocol_access: true

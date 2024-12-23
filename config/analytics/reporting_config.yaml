@@ -1,0 +1,24 @@
+reporting:
+  intervals:
+    daily:
+      time: "00:00 UTC"
+      metrics:
+        - portfolio_value
+        - daily_pnl
+        - top_performers
+    weekly:
+      day: "Monday"
+      metrics:
+        - weekly_summary
+        - risk_metrics
+        - market_analysis
+  formats:
+    - json
+    - pdf
+  channels:
+    - discord
+    - email
+  retention:
+    daily: 30
+    weekly: 180
+    monthly: 365

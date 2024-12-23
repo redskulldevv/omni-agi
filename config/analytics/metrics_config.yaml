@@ -1,0 +1,23 @@
+metrics:
+  market:
+    price_change:
+      interval: 1h
+      thresholds:
+        critical: 10
+        warning: 5
+    volume:
+      min_threshold: 100000
+      max_threshold: 10000000
+  portfolio:
+    roi_targets:
+      daily: 0.5
+      weekly: 3.0
+      monthly: 10.0
+    drawdown_limits:
+      max: 15.0
+      stop_loss: 25.0
+  social:
+    engagement_metrics:
+      min_likes: 50
+      min_retweets: 10
+      sentiment_threshold: 0.7

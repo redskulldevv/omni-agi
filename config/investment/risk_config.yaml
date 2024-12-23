@@ -1,0 +1,16 @@
+risk_management:
+  portfolio:
+    max_allocation:
+      single_token: 20.0
+      sector: 40.0
+    min_liquidity: 1000000
+    max_slippage: 1.0
+  position:
+    stop_loss: 15.0
+    take_profit: 30.0
+  volatility:
+    max_daily: 20.0
+    max_weekly: 40.0
+  correlation:
+    max_correlation: 0.7
+    min_assets: 5
