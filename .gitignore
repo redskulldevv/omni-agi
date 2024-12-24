@@ -77,3 +77,4 @@ dmypy.json
 # Windows
 Thumbs.db
 ehthumbs.db
+logs/agent.log
