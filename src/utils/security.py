@@ -126,11 +126,52 @@ class SecurityService:
             logger.error(f"Data sanitization failed: {e}")
             return {}
 
+    async def verify_trade(self, trade_params: Dict) -> bool:
+        """Verify trade parameters and conditions"""
+        try:
+            # Basic parameter validation
+            required_params = ['type', 'amount', 'token']
+            if not all(param in trade_params for param in required_params):
+                return False
+                
+            # Validate trade size
+            if not self._validate_trade_size(trade_params['amount']):
+                return False
+                
+            # Check security conditions
+            return self._check_security_conditions(trade_params)
+            
+        except Exception as e:
+            logger.error(f"Trade verification error: {e}")
+            return False
+
+    def _validate_trade_size(self, amount: float) -> bool:
+        """Validate trade size against limits"""
+        try:
+            max_trade_size = self.config.get('max_trade_size', 1000)
+            min_trade_size = self.config.get('min_trade_size', 0.1)
+            
+            return min_trade_size <= amount <= max_trade_size
+            
+        except Exception as e:
+            logger.error(f"Trade size validation error: {e}")
+            return False
+
+    def _check_security_conditions(self, trade_params: Dict) -> bool:
+        """Check additional security conditions"""
+        try:
+            # Add your security checks here
+            return True
+        except Exception as e:
+            logger.error(f"Security condition check error: {e}")
+            return False
+
     async def cleanup(self) -> None:
         """Cleanup security service resources"""
         try:
             self._initialized = False
             self._error_counts.clear()
             self._last_errors.clear()
+            logger.info("Security service cleaned up successfully")
         except Exception as e:
             logger.error(f"Security service cleanup failed: {e}")

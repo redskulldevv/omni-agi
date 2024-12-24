@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, List
 from datetime import datetime, timedelta
 import logging
 from dataclasses import dataclass
@@ -49,39 +49,50 @@ class ContextManager:
     """Manages agent's context and situational awareness"""
     
     def __init__(self):
-        self.initialized = False
-        self.current_context: Dict[str, Any] = {}
-        self.context_history: List[Dict[str, Any]] = []
-        self.max_history_size = 1000
+        self._context = {}
+        self._initialized = False
 
-    async def initialize(self) -> bool:
-        """Initialize context manager"""
+    async def initialize(self) -> None:
+        """Initialize the context manager"""
         try:
-            logger.info("Initializing context manager...")
-            
-            # Initialize empty context
-            self.current_context = {
-                "system_state": "initialized",
-                "timestamp": datetime.now().isoformat(),
-                "active_tasks": [],
-                "pending_actions": [],
-                "environment": {}
+            self._context = {
+                "start_time": datetime.now().isoformat(),
+                "market_state": {},
+                "portfolio_state": {},
+                "system_state": {}
             }
-            
-            # Clear history
-            self.context_history = []
-            
-            self.initialized = True
-            logger.info("Context manager initialized successfully")
-            return True
-            
+            self._initialized = True
+            logger.info("Context Manager initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize context manager: {e}")
-            return False
+            logger.error(f"Failed to initialize Context Manager: {e}")
+            raise
+
+    async def get_current_context(self) -> Dict[str, Any]:
+        """Get current context state"""
+        if not self._initialized:
+            raise RuntimeError("Context Manager not initialized")
+        return self._context.copy()
+
+    async def update_context(self, updates: Dict[str, Any]) -> None:
+        """Update context with new information"""
+        if not self._initialized:
+            raise RuntimeError("Context Manager not initialized")
+        self._context.update(updates)
+        self._context["last_updated"] = datetime.now().isoformat()
+
+    async def cleanup(self) -> None:
+        """Cleanup context manager resources"""
+        try:
+            self._context.clear()
+            self._initialized = False
+            logger.info("Context Manager cleaned up successfully")
+        except Exception as e:
+            logger.error(f"Error cleaning up Context Manager: {e}")
+            raise
 
     async def update(self, new_context: Dict[str, Any]) -> Dict[str, Any]:
         """Update current context with new information"""
-        if not self.initialized:
+        if not self._initialized:
             await self.initialize()
             
         # Save current context to history

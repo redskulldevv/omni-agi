@@ -1,8 +1,8 @@
 from typing import Dict, Optional, Union
-from solders.keypair import Keypair
-from solders.pubkey import Pubkey
+from solders.keypair import Keypair # type: ignore
+from solders.pubkey import Pubkey # type: ignore
 from solders.system_program import transfer, TransferParams
-from solders.transaction import Transaction
+from solders.transaction import Transaction # type: ignore
 from solana.rpc.types import TxOpts
 from solana.rpc.async_api import AsyncClient
 import base58
@@ -13,9 +13,9 @@ from solana.rpc.commitment import Commitment
 from decimal import Decimal
 
 # Additional imports
-from solders.hash import Hash
-from solders.message import MessageV0
-from solders.transaction import VersionedTransaction
+from solders.hash import Hash # type: ignore
+from solders.message import MessageV0 # type: ignore
+from solders.transaction import VersionedTransaction # type: ignore
 
 # Define constants
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  # Solana USDC mint

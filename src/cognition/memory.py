@@ -60,33 +60,25 @@ class MemoryManager:
         }
 
         self.index: Dict[str, List[Memory]] = defaultdict(list)
-        self.initialized = False
+        self._initialized = False
 
-    async def initialize(self) -> bool:
-        """Initialize memory system"""
+    async def initialize(self) -> None:
+        """Initialize memory manager"""
         try:
-            logger.info("Initializing memory system...")
-            
-            # Clear existing memories if any
-            self.memories = {memory_type: [] for memory_type in MemoryType}
-            self.index = defaultdict(list)
-            
-            # Initialize with some basic system memories if needed
-            await self.store_memory(
-                content="System initialized",
-                memory_type=MemoryType.SEMANTIC,
-                priority=MemoryPriority.LOW,
-                tags=["system", "initialization"],
-                metadata={"timestamp": datetime.now().isoformat()}
-            )
-            
-            self.initialized = True
-            logger.info("Memory system initialized successfully")
-            return True
-            
+            self._initialized = True
+            logger.info("Memory Manager initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize memory system: {e}")
-            return False
+            logger.error(f"Failed to initialize Memory Manager: {e}")
+            raise
+
+    async def cleanup(self) -> None:
+        """Cleanup memory manager resources"""
+        try:
+            self.memories.clear()
+            self._initialized = False
+            logger.info("Memory Manager cleaned up successfully")
+        except Exception as e:
+            logger.error(f"Error cleaning up Memory Manager: {e}")
 
     async def store_memory(
         self,
