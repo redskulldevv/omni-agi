@@ -100,7 +100,24 @@ class ReasoningEngine:
             # Add other strategies as needed
         }
         self.decisions: List[Decision] = []
-
+    
+    async def initialize(self) -> bool:
+        """Initialize the reasoning engine"""
+        try:
+            logger.info("Initializing reasoning engine...")
+            
+            # Initialize strategies if needed
+            for strategy_type, strategy in self.strategies.items():
+                if hasattr(strategy, 'initialize'):
+                    await strategy.initialize()
+            
+            self.initialized = True
+            logger.info("Reasoning engine initialized successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize reasoning engine: {e}")
+            return False
     async def make_decision(
         self,
         decision_type: DecisionType,

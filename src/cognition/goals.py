@@ -1,5 +1,10 @@
 from enum import Enum
 from typing import Dict, List, Optional, Any
+
+class GoalPriority(Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 from datetime import datetime
 from dataclasses import dataclass
 import logging
@@ -42,12 +47,53 @@ class Goal:
 
 
 class GoalManager:
-    """Manages agent goals and objectives"""
-
-    def __init__(self):
-        self.goals: Dict[str, Goal] = {}
+    def __init__(self, max_concurrent_goals: int = 5):
+        self.max_concurrent_goals = max_concurrent_goals
+        self.active_goals: List[Goal] = []
         self.completed_goals: List[Goal] = []
         self.failed_goals: List[Goal] = []
+        self._initialized = False
+        
+    async def initialize(self) -> None:
+        """Initialize the goal manager"""
+        try:
+            # Load any persistent goals from storage
+            # Initialize goal tracking systems
+            self._initialized = True
+            logger.info("Goal Manager initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Goal Manager: {e}")
+            raise
+
+    async def add_goal(self, 
+                      goal_type: str,
+                      description: str,
+                      priority: int = 1,
+                      deadline: Optional[datetime] = None,
+                      parameters: Optional[Dict] = None) -> Goal:
+        """Add a new goal to the system"""
+        if not self._initialized:
+            raise RuntimeError("Goal Manager not initialized")
+            
+        try:
+            goal = Goal(
+                goal_type=goal_type,
+                description=description,
+                priority=priority,
+                deadline=deadline,
+                parameters=parameters
+            )
+            
+            if len(self.active_goals) >= self.max_concurrent_goals:
+                await self._reprioritize_goals()
+                
+            self.active_goals.append(goal)
+            logger.info(f"Added new goal: {goal.id} - {description}")
+            return goal
+            
+        except Exception as e:
+            logger.error(f"Failed to add goal: {e}")
+            raise
 
     async def create_goal(
         self,

@@ -1,19 +1,27 @@
 import asyncio
+from asyncio.log import logger
 from dataclasses import dataclass
 import os
-from typing import Dict, Optional
+from typing import Dict, List
 from typing import Dict
 import asyncio
 
 from dotenv import load_dotenv
+# At the top of agent.py
+from utils.errors import SecurityError, AgentError
+from utils.security import SecurityService
+
+
+
 from blockchain.solana.wallet import SolanaWallet
 
 # Core services
 from blockchain.solana.wallet import SolanaWallet
-from utils.security import SecurityError
+
 
 # Existing imports
 from models import ClaudeAI, GroqAI
+
 
 """
 Core Agent Implementation
@@ -60,8 +68,8 @@ import yaml
 
 # Keep existing imports, add only new ones
 from models import ClaudeAI, GroqAI
-from utils.security import SecurityError
 
+#from utils.errors import SecurityError
 
 @dataclass
 class AgentConfig:
@@ -83,6 +91,15 @@ class Agent:
         self.settings = self._load_settings()
         self.personality = self._load_personality()
         
+        # Initialize security first
+        self.security = SecurityService(
+            config=self.settings.get('security', {
+                'max_retries': 3,
+                'error_cooldown': 5,
+                'signing_key': self.settings.get('security', {}).get('signing_key', 'default_key')
+            })
+        )
+            
         # Initialize all components
         self.memory = MemoryManager()
         self.reasoning = ReasoningEngine()
@@ -98,10 +115,10 @@ class Agent:
         # Initialize wallets
         self.solana_wallet = SolanaWallet(api_keys["solana_rpc"])
         self.ethereum_wallet = EthereumWallet(
-        rpc_url=api_keys["ethereum_rpc"],
-        zksync_url=api_keys.get("zksync_rpc"),
-        private_key=api_keys.get("eth_private_key") 
-    )
+            rpc_url=api_keys["ethereum_rpc"],
+            zksync_url=api_keys.get("zksync_rpc"),
+            private_key=api_keys.get("eth_private_key") 
+        )
 
     def _load_settings(self):
         self.logger.debug(f"Loading settings from {self.config.settings_path}")
@@ -129,9 +146,9 @@ class Agent:
                 self.ethereum_wallet
             ]
             
-            # Initialize all systems
+            # Initialize all systems - properly await the coroutines
             results = await asyncio.gather(
-                *[system.initialize() for system in systems],
+                *(system.initialize() for system in systems),
                 return_exceptions=True
             )
             
@@ -210,7 +227,98 @@ class Agent:
         except Exception as e:
             self.logger.error(f"Failed to initialize core components: {e}")
             raise
-
+    async def _run_cognition_loop(self):
+        """Run the main cognitive processing loop"""
+        logger = logging.getLogger("cognition_loop")
+        
+        while True:
+            try:
+                # 1. Update Context
+                current_context = await self.context.get_current_context()
+                
+                # 2. Process Active Goals
+                active_goals = await self.goals.get_active_goals()
+                for goal in active_goals:
+                    # 2.1 Get relevant memories
+                    relevant_memories = await self.memory.get_relevant_memories(
+                        goal, current_context
+                    )
+                    
+                    # 2.2 Analyze with reasoning engine
+                    analysis = await self.reasoning.analyze_goal(
+                        goal=goal,
+                        context=current_context,
+                        memories=relevant_memories
+                    )
+                    
+                    # 2.3 Determine required actions
+                    actions = await self.determine_actions(analysis)
+                    
+                    # 2.4 Execute actions
+                    for action in actions:
+                        result = await self.execute_action(action)
+                        
+                        # 2.5 Learn from results
+                        await self.learning.learn_from_action(action, result)
+                        
+                        # 2.6 Update goal progress
+                        progress = self._calculate_progress(goal, actions, result)
+                        await self.goals.update_goal_status(
+                            goal_id=goal.id,
+                            status="in_progress",
+                            progress=progress
+                        )
+                
+                # 3. Generate New Goals
+                new_goals = await self._generate_new_goals(current_context)
+                for goal in new_goals:
+                    await self.goals.add_goal(**goal)
+                
+                # 4. Cleanup and Maintenance
+                await self._cognitive_maintenance()
+                
+                # Sleep interval between cycles
+                await asyncio.sleep(self.settings.get("cognition", {}).get("cycle_interval", 10))
+                
+            except Exception as e:
+                logger.error(f"Error in cognition loop: {e}")
+                await self.handle_error(e)
+                await asyncio.sleep(5)  # Brief pause on error
+            
+    async def _generate_new_goals(self, context: Dict) -> List[Dict]:
+        """Generate new goals based on current context and state"""
+        try:
+            prompt = f"Given the current context and state: {context}\n"
+            prompt += "What new goals should be pursued? Consider:\n"
+            prompt += "1. Market opportunities\n"
+            prompt += "2. Risk management needs\n"
+            prompt += "3. Community engagement requirements\n"
+            prompt += "4. Research and analysis needs"
+            
+            response = await self.claude.complete(prompt)
+            
+            # Parse and validate goals
+            goals = self._parse_goals_from_response(response)
+            return goals
+            
+        except Exception as e:
+            logger.error(f"Failed to generate new goals: {e}")
+            return []
+            
+    async def _cognitive_maintenance(self):
+        """Perform regular maintenance tasks"""
+        try:
+            # Cleanup old memories
+            await self.memory.cleanup_old_memories()
+            
+            # Update learning models
+            await self.learning.update_models()
+            
+            # Optimize goal priorities
+            await self.goals._reprioritize_goals()
+            
+        except Exception as e:
+            logger.error(f"Error in cognitive maintenance: {e}")
     async def start(self):
         """Start the agent and all its components"""
         try:
@@ -446,7 +554,7 @@ if __name__ == "__main__":
         "solana_rpc": os.getenv("SOLANA_RPC_URL"),
         "ethereum_rpc": os.getenv("ETH_RPC_URL"),
         "zksync_rpc": os.getenv("ZKSYNC_RPC_URL"),
-         "eth_private_key": os.getenv("ETH_PRIVATE_KEY"),
+         "eth_private_key": os.getenv("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"),
     }
 
     # Initialize agent config

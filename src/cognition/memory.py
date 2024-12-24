@@ -60,6 +60,33 @@ class MemoryManager:
         }
 
         self.index: Dict[str, List[Memory]] = defaultdict(list)
+        self.initialized = False
+
+    async def initialize(self) -> bool:
+        """Initialize memory system"""
+        try:
+            logger.info("Initializing memory system...")
+            
+            # Clear existing memories if any
+            self.memories = {memory_type: [] for memory_type in MemoryType}
+            self.index = defaultdict(list)
+            
+            # Initialize with some basic system memories if needed
+            await self.store_memory(
+                content="System initialized",
+                memory_type=MemoryType.SEMANTIC,
+                priority=MemoryPriority.LOW,
+                tags=["system", "initialization"],
+                metadata={"timestamp": datetime.now().isoformat()}
+            )
+            
+            self.initialized = True
+            logger.info("Memory system initialized successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize memory system: {e}")
+            return False
 
     async def store_memory(
         self,

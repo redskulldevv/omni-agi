@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional, Any
+from enum import Enum
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 import logging
@@ -9,37 +10,157 @@ from collections import deque
 logger = logging.getLogger(__name__)
 
 
+class LearningType(Enum):
+    REINFORCEMENT = "reinforcement"
+    SUPERVISED = "supervised"
+    UNSUPERVISED = "unsupervised"
+    TRANSFER = "transfer"
 class ExperienceType(Enum):
-    MARKET_DECISION = "market_decision"
-    TRADING_ACTION = "trading_action"
-    SOCIAL_INTERACTION = "social_interaction"
-    ERROR_HANDLING = "error_handling"
-    USER_FEEDBACK = "user_feedback"
-
+    TYPE_A = "type_a"
+    TYPE_B = "type_b"
+    TYPE_C = "type_c"
 
 @dataclass
-class Experience:
-    """Individual learning experience"""
-
-    type: ExperienceType
-    action: str
-    context: Dict[str, Any]
-    outcome: Dict[str, Any]
-    timestamp: datetime
-    success_score: float  # 0.0 to 1.0
-    importance: float  # 0.0 to 1.0
-    metadata: Optional[Dict] = None
-
+class LearningExperience:
+    def __init__(self, 
+                 action: str,
+                 context: Dict[str, Any],
+                 outcome: Any,
+                 reward: float,
+                 learning_type: LearningType):
+        self.action = action
+        self.context = context
+        self.outcome = outcome
+        self.reward = reward
+        self.learning_type = learning_type
+        self.timestamp = datetime.now()
 
 class LearningManager:
-    """Manages agent learning and improvement"""
+    def __init__(self):
+        self.experiences: List[LearningExperience] = []
+        self.learning_models: Dict[str, Any] = {}
+        self.performance_metrics: Dict[str, float] = {}
+        self.initialized = False
 
-    def __init__(self, memory_size: int = 1000, learning_rate: float = 0.1):
-        self.memory_size = memory_size
-        self.learning_rate = learning_rate
-        self.experiences: deque = deque(maxlen=memory_size)
-        self.patterns: Dict[str, Dict] = {}
-        self.performance_history: List[Dict] = []
+    async def initialize(self) -> bool:
+        """Initialize learning system"""
+        try:
+            logger.info("Initializing learning manager...")
+            
+            # Reset learning history
+            self.experiences = []
+            
+            # Initialize learning models
+            self.learning_models = {
+                "market": self._initialize_market_learning(),
+                "social": self._initialize_social_learning(),
+                "risk": self._initialize_risk_learning()
+            }
+            
+            # Reset performance metrics
+            self.performance_metrics = {
+                "market_accuracy": 0.0,
+                "social_engagement": 0.0,
+                "risk_assessment": 0.0
+            }
+            
+            self.initialized = True
+            logger.info("Learning manager initialized successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize learning manager: {e}")
+            return False
+
+    def _initialize_market_learning(self) -> Dict:
+        """Initialize market learning models"""
+        return {
+            "prediction_model": None,  # Placeholder for actual model
+            "confidence": 0.0
+        }
+
+    def _initialize_social_learning(self) -> Dict:
+        """Initialize social interaction learning"""
+        return {
+            "engagement_model": None,  # Placeholder for actual model
+            "sentiment_analysis": None
+        }
+
+    def _initialize_risk_learning(self) -> Dict:
+        """Initialize risk assessment learning"""
+        return {
+            "risk_model": None,  # Placeholder for actual model
+            "threshold_learning": None
+        }
+
+    async def record_experience(self,
+                              action: str,
+                              context: Dict[str, Any],
+                              outcome: Any,
+                              reward: float,
+                              learning_type: LearningType):
+        """Record a learning experience"""
+        if not self.initialized:
+            await self.initialize()
+            
+        experience = LearningExperience(
+            action=action,
+            context=context,
+            outcome=outcome,
+            reward=reward,
+            learning_type=learning_type
+        )
+        
+        self.experiences.append(experience)
+        await self._update_models(experience)
+
+    async def _update_models(self, experience: LearningExperience):
+        """Update learning models based on new experience"""
+        if experience.learning_type == LearningType.REINFORCEMENT:
+            await self._update_reinforcement_learning(experience)
+        elif experience.learning_type == LearningType.SUPERVISED:
+            await self._update_supervised_learning(experience)
+        
+        await self._update_performance_metrics()
+
+    async def _update_reinforcement_learning(self, experience: LearningExperience):
+        """Update reinforcement learning models"""
+        # Implement reinforcement learning update logic
+        pass
+
+    async def _update_supervised_learning(self, experience: LearningExperience):
+        """Update supervised learning models"""
+        # Implement supervised learning update logic
+        pass
+
+    async def _update_performance_metrics(self):
+        """Update performance metrics"""
+        if self.experiences:
+            recent_experiences = self.experiences[-100:]  # Last 100 experiences
+            
+            # Update market accuracy
+            market_experiences = [e for e in recent_experiences if "market" in e.action]
+            if market_experiences:
+                self.performance_metrics["market_accuracy"] = sum(
+                    e.reward for e in market_experiences
+                ) / len(market_experiences)
+            
+            # Update other metrics similarly
+            
+    async def get_performance_metrics(self) -> Dict[str, float]:
+        """Get current performance metrics"""
+        return self.performance_metrics
+
+    async def get_learning_summary(self) -> Dict[str, Any]:
+        """Get summary of learning progress"""
+        return {
+            "total_experiences": len(self.experiences),
+            "performance_metrics": self.performance_metrics,
+            "model_states": {
+                name: {"confidence": model.get("confidence", 0.0)}
+                for name, model in self.learning_models.items()
+            }
+        }
 
     async def record_experience(
         self,
@@ -50,10 +171,10 @@ class LearningManager:
         success_score: float,
         importance: float = 0.5,
         metadata: Optional[Dict] = None,
-    ) -> Experience:
+    ) -> LearningExperience:
         """Record new learning experience"""
         try:
-            experience = Experience(
+            experience = LearningExperience(
                 type=exp_type,
                 action=action,
                 context=context,
@@ -79,7 +200,7 @@ class LearningManager:
         context: Dict[str, Any],
         exp_type: Optional[ExperienceType] = None,
         limit: int = 5,
-    ) -> List[Experience]:
+    ) -> List[LearningExperience]:
         """Find similar past experiences"""
         try:
             relevant_experiences = []
@@ -152,7 +273,7 @@ class LearningManager:
             logger.error(f"Error getting recommendation: {e}")
             raise
 
-    async def _analyze_pattern(self, experience: Experience):
+    async def _analyze_pattern(self, experience: LearningExperience):
         """Analyze and store patterns from experience"""
         pattern_key = f"{experience.type.value}_{experience.action}"
 
@@ -176,7 +297,7 @@ class LearningManager:
         # Keep only recent contexts
         pattern["contexts"] = pattern["contexts"][-50:]
 
-    async def _update_performance_metrics(self, experience: Experience):
+    async def _update_performance_metrics(self, experience: LearningExperience):
         """Update performance tracking metrics"""
         self.performance_history.append(
             {

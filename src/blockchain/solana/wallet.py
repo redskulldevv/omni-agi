@@ -9,6 +9,7 @@ import base58
 import logging
 import os
 import json
+from solana.rpc.commitment import Commitment
 from decimal import Decimal
 
 # Additional imports
@@ -24,11 +25,25 @@ TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 logger = logging.getLogger(__name__)
 
 class SolanaWallet:
-    def __init__(self, rpc_url: str, private_key: Optional[str] = None):
-        self.client = AsyncClient(rpc_url)
-        self.keypair = self._initialize_keypair(private_key)
-        self.private_key = private_key
-
+    def __init__(self, 
+                 rpc_url: str,
+                 keypair: Optional[Keypair] = None,
+                 commitment: Commitment = Commitment("confirmed")):
+        self.client = AsyncClient(rpc_url, commitment)
+        self.keypair = keypair or Keypair()
+        self._initialized = False
+        
+    async def initialize(self) -> None:
+        """Initialize the wallet and verify connection"""
+        try:
+            # Test connection
+            await self.client.is_connected()
+            # Get initial balance
+            await self.get_balance()
+            self._initialized = True
+        except Exception as e:
+            print(f"Failed to initialize SolanaWallet: {str(e)}")
+            raise
     def _initialize_keypair(self, private_key: Optional[str] = None) -> Keypair:
         """Initialize Solana keypair"""
         try:
@@ -157,6 +172,9 @@ class SolanaWallet:
     def public_key(self) -> str:
         """Get wallet public key"""
         return str(self.keypair.pubkey())
+
+    async def close(self):
+        await self.client.close()
 
 # Example usage of solders library
 sender = Keypair()  # let's pretend this account actually has SOL to send

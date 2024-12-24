@@ -31,6 +31,11 @@ class EthereumWallet:
 
         return abis
 
+    async def initialize(self):
+        """Initialize the Ethereum wallet"""
+        logger.info("Initializing EthereumWallet")
+        # Add any initialization logic here
+
     async def get_l2_balance(
         self, token_address: Optional[str] = None, address: Optional[str] = None
     ) -> Decimal:

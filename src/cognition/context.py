@@ -46,18 +46,69 @@ class Context:
 
 
 class ContextManager:
-    """Manages agent's context and memory"""
+    """Manages agent's context and situational awareness"""
+    
+    def __init__(self):
+        self.initialized = False
+        self.current_context: Dict[str, Any] = {}
+        self.context_history: List[Dict[str, Any]] = []
+        self.max_history_size = 1000
 
-    def __init__(
-        self,
-        memory_limit: int = 1000,
-        context_ttl: int = 3600,  # seconds
-    ):
-        self.memory_limit = memory_limit
-        self.context_ttl = context_ttl
-        self.current_context: Dict[ContextType, Context] = {}
-        self.memory_store: List[Memory] = []
-        self.context_history: List[Context] = []
+    async def initialize(self) -> bool:
+        """Initialize context manager"""
+        try:
+            logger.info("Initializing context manager...")
+            
+            # Initialize empty context
+            self.current_context = {
+                "system_state": "initialized",
+                "timestamp": datetime.now().isoformat(),
+                "active_tasks": [],
+                "pending_actions": [],
+                "environment": {}
+            }
+            
+            # Clear history
+            self.context_history = []
+            
+            self.initialized = True
+            logger.info("Context manager initialized successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize context manager: {e}")
+            return False
+
+    async def update(self, new_context: Dict[str, Any]) -> Dict[str, Any]:
+        """Update current context with new information"""
+        if not self.initialized:
+            await self.initialize()
+            
+        # Save current context to history
+        if len(self.context_history) >= self.max_history_size:
+            self.context_history.pop(0)  # Remove oldest context
+        self.context_history.append(self.current_context.copy())
+        
+        # Update context
+        self.current_context.update(new_context)
+        self.current_context["timestamp"] = datetime.now().isoformat()
+        
+        return self.current_context
+
+    async def get_context(self) -> Dict[str, Any]:
+        """Get current context"""
+        return self.current_context
+
+    async def get_context_history(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get context history with optional limit"""
+        if limit:
+            return self.context_history[-limit:]
+        return self.context_history
+
+    async def clear_context(self):
+        """Clear current context and history"""
+        self.current_context = {}
+        self.context_history = []
 
     async def add_context(
         self,
