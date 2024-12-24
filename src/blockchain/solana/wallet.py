@@ -1,5 +1,4 @@
 from typing import Dict, Optional, Union
-from solders.rpc.responses import GetBalanceResp
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.system_program import transfer, TransferParams
@@ -11,6 +10,11 @@ import logging
 import os
 import json
 from decimal import Decimal
+
+# Additional imports
+from solders.hash import Hash
+from solders.message import MessageV0
+from solders.transaction import VersionedTransaction
 
 # Define constants
 USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  # Solana USDC mint
@@ -28,7 +32,7 @@ class SolanaWallet:
     def _initialize_keypair(self, private_key: Optional[str] = None) -> Keypair:
         """Initialize Solana keypair"""
         try:
-            if private_key:
+            if (private_key):
                 # Use existing private key
                 secret_key = base58.b58decode(private_key)
                 return Keypair.from_bytes(secret_key)
@@ -153,3 +157,20 @@ class SolanaWallet:
     def public_key(self) -> str:
         """Get wallet public key"""
         return str(self.keypair.pubkey())
+
+# Example usage of solders library
+sender = Keypair()  # let's pretend this account actually has SOL to send
+receiver = Keypair()
+ix = transfer(
+    TransferParams(
+        from_pubkey=sender.pubkey(), to_pubkey=receiver.pubkey(), lamports=1_000_000
+    )
+)
+blockhash = Hash.default()  # replace with a real blockhash using get_latest_blockhash
+msg = MessageV0.try_compile(
+    payer=sender.pubkey(),
+    instructions=[ix],
+    address_lookup_table_accounts=[],
+    recent_blockhash=blockhash,
+)
+tx = VersionedTransaction(msg, [sender])

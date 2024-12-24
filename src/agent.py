@@ -1,30 +1,19 @@
 import asyncio
-import logging
-from typing import Dict, List
-from typing import Dict, List
+from dataclasses import dataclass
+import os
+from typing import Dict, Optional
+from typing import Dict
 import asyncio
-import logging
+
+from dotenv import load_dotenv
 from blockchain.solana.wallet import SolanaWallet
 
 # Core services
-from communication.social.twitter import TwitterClient
 from blockchain.solana.wallet import SolanaWallet
-from blockchain.ethereum.wallet import ZkWallet
-from utils.config import Config
-from utils.security import Security, SecurityError
+from utils.security import SecurityError
 
 # Existing imports
-from models import Claude, Groq
-from blockchain.solana import Trades, Tokens
-from investment.portfolio import Allocation, RiskManagement
-from investment.analysis import MarketAnalysis, SentimentAnalysis
-from tokenomics.creation import TokenGenerator
-from tokenomics.liquidity import PoolManagement
-from dealflow.sourcing import ProjectScanner
-from dealflow.evaluation import TeamAnalysis, TechAnalysis
-from community.engagement import DiscordManager
-from research.market_research import TrendAnalysis
-from utils.logger import setup_logger
+from models import ClaudeAI, GroqAI
 
 """
 Core Agent Implementation
@@ -32,104 +21,147 @@ Integrates all components and provides main agent functionality.
 """
 
 import asyncio
-from typing import Dict, List, Optional
-from dataclasses import dataclass
+from typing import Dict
 import yaml
 import logging
 
 # AI Models
-from models.claude import ClaudeModel
-from models.groq import GroqModel
 
 # Blockchain
 from blockchain.solana.wallet import SolanaWallet
 from blockchain.ethereum.wallet import EthereumWallet
-from blockchain.solana.trades import SolanaTrades
-from blockchain.ethereum.transactions import EthereumTransactions
 
 # Cognition
-from cognition.memory import MemorySystem
+from cognition.memory import MemoryManager
 from cognition.reasoning import ReasoningEngine
 from cognition.context import ContextManager
 from cognition.goals import GoalManager
-from cognition.learning import LearningSystem
+from cognition.learning import LearningManager
 
 # Communication
-from communication.social.discord import DiscordManager
-from communication.social.twitter import TwitterManager
-from communication.interfaces.api import APIServer
-from communication.interfaces.chat import ChatInterface
 
 # Community
-from community.content.generator import ContentGenerator
-from community.content.scheduler import ContentScheduler
-from community.engagement.discord_manager import DiscordCommunityManager
-from community.engagement.twitter_manager import TwitterCommunityManager
-from community.growth.campaigns import CampaignManager
-from community.growth.metrics_tracker import GrowthMetricsTracker
 
 # Investment
 from investment.analysis.market_analysis import MarketAnalyzer
 from investment.analysis.sentiment_analysis import SentimentAnalyzer
-from investment.portfolio.allocation import PortfolioAllocator
-from investment.portfolio.risk_management import RiskManager
-from investment.strategy.entry_exit import EntryExitStrategy
 
 # Research
-from research.data_analysis.metrics_analysis import MetricsAnalyzer
-from research.market_research.competitor_analysis import CompetitorAnalyzer
-from research.market_research.trend_analysis import TrendAnalyzer
-from research.reports.report_generator import ReportGenerator
 
 # Tokenomics
-from tokenomics.creation.token_generator import TokenGenerator
-from tokenomics.liquidity.pool_management import PoolManager
-from tokenomics.revenue.fee_collection import FeeCollector
 
 # Utils
-from utils.config import ConfigLoader
-from utils.logger import setup_logger
-from utils.security import SecurityManager
 
 # Part 1: Core Agent Implementation
 import asyncio
 import logging
-from typing import Dict, List
-from dataclasses import dataclass
+from typing import Dict
 import yaml
 
 # Keep existing imports, add only new ones
-from models import Claude, Groq
-from utils.config import Config, ConfigLoader
-from utils.security import Security, SecurityError
-from utils.logger import setup_logger
+from models import ClaudeAI, GroqAI
+from utils.security import SecurityError
 
 
 @dataclass
 class AgentConfig:
-    name: str
-    personality_path: str
-    settings_path: str
-    api_keys: Dict[str, str]
-
+    def __init__(self, 
+                 name: str, 
+                 personality_path: str, 
+                 settings_path: str):
+        self.name = name
+        self.personality_path = personality_path
+        self.settings_path = settings_path
 
 class Agent:
-    def __init__(self, config: AgentConfig):
+    def __init__(self, config: AgentConfig, api_keys: Dict[str, str]):
         self.config = config
-        self.logger = setup_logger(config.name)
-
+        self.api_keys = api_keys
+        self.logger = logging.getLogger(self.config.name)
+        
         # Load configurations
         self.settings = self._load_settings()
         self.personality = self._load_personality()
+        
+        # Initialize all components
+        self.memory = MemoryManager()
+        self.reasoning = ReasoningEngine()
+        self.context = ContextManager()
+        self.goals = GoalManager()
+        self.learning = LearningManager()
+        
+        # Market Analysis
+        market_data_sources = self.settings.get("market_analysis", {}).get("data_sources", {})
+        self.market_analyzer = MarketAnalyzer(data_sources=market_data_sources)
+        self.sentiment_analyzer = SentimentAnalyzer(data_sources={"social": "twitter"})  # Changed here
 
-        # Initialize components
-        self._initialize_components()
+        # Initialize wallets
+        self.solana_wallet = SolanaWallet(api_keys["solana_rpc"])
+        self.ethereum_wallet = EthereumWallet(
+        rpc_url=api_keys["ethereum_rpc"],
+        zksync_url=api_keys.get("zksync_rpc"),
+        private_key=api_keys.get("eth_private_key") 
+    )
+
+    def _load_settings(self):
+        self.logger.debug(f"Loading settings from {self.config.settings_path}")
+        with open(self.config.settings_path) as f:
+            return yaml.safe_load(f)
+
+    def _load_personality(self):
+        self.logger.debug(f"Loading personality from {self.config.personality_path}")
+        with open(self.config.personality_path) as f:
+            return yaml.safe_load(f)
+
+    async def _initialize_systems(self):
+        """Initialize all system components"""
+        try:
+            # Initialize subsystems
+            systems = [
+                self.memory,
+                self.reasoning,
+                self.context,
+                self.goals,
+                self.learning,
+                self.market_analyzer,
+                self.sentiment_analyzer,
+                self.solana_wallet,
+                self.ethereum_wallet
+            ]
+            
+            # Initialize all systems
+            results = await asyncio.gather(
+                *[system.initialize() for system in systems],
+                return_exceptions=True
+            )
+            
+            # Check for any initialization failures
+            for system, result in zip(systems, results):
+                if isinstance(result, Exception):
+                    self.logger.error(f"Failed to initialize {system.__class__.__name__}: {result}")
+                    raise result
+            
+            self.logger.info("All systems initialized successfully")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to initialize systems: {e}")
+            raise
+
+    def _load_settings(self):
+        self.logger.debug(f"Loading settings from {self.config.settings_path}")
+        with open(self.config.settings_path) as f:
+            return yaml.safe_load(f)
+
+    def run(self):
+        self.logger.info("Agent is running")
+        # Add your agent's main logic here
+
 
     def _initialize_components(self):
         """Initialize all agent components"""
         # AI Models
-        self.claude = Claude(self.config.api_keys["claude"])
-        self.groq = Groq(self.config.api_keys["groq"])
+        self.claude = ClaudeAI(self.config.api_keys["claude"])
+        self.groq = GroqAI(self.config.api_keys["groq"])
 
         # Initialize wallets
         self._initialize_wallets()
@@ -164,15 +196,15 @@ class Agent:
     def _initialize_core_components(self):
         try:
             # Cognition
-            self.memory = MemorySystem()
+            self.memory = MemoryManager()
             self.reasoning = ReasoningEngine()
             self.context = ContextManager()
             self.goals = GoalManager()
-            self.learning = LearningSystem()
+            self.learning = LearningManager()
 
             # Analysis
             self.market_analyzer = MarketAnalyzer()
-            self.sentiment_analyzer = SentimentAnalyzer()
+            self.sentiment_analyzer = MarketAnalyzer()
 
             self.logger.info("Core components initialized successfully")
         except Exception as e:
@@ -395,15 +427,35 @@ class Agent(Agent):  # Continues from Part 1
 
 
 if __name__ == "__main__":
-    config_path = "config/agent_config.yaml"
-    config = Config(config_path)
-    agent = Agent(
-        AgentConfig(
-            name=config.get("agent_name"),
-            personality_path=config.get("personality_path"),
-            settings_path=config.get("settings_path"),
-            api_keys=config.get("api_keys"),
-        )
+    # Load environment variables
+    load_dotenv()
+
+    # Get the project root directory
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    # Configure paths
+    config_paths = {
+        "settings_path": os.path.join(project_root, "config", "settings.yaml"),
+        "personality_path": os.path.join(project_root, "config", "personality.yaml"),
+    }
+
+    # Create API keys dictionary
+    api_keys = {
+        "claude": os.getenv("CLAUDE_API_KEY"),
+        "groq": os.getenv("GROQ_API_KEY"),
+        "solana_rpc": os.getenv("SOLANA_RPC_URL"),
+        "ethereum_rpc": os.getenv("ETH_RPC_URL"),
+        "zksync_rpc": os.getenv("ZKSYNC_RPC_URL"),
+         "eth_private_key": os.getenv("ETH_PRIVATE_KEY"),
+    }
+
+    # Initialize agent config
+    agent_config = AgentConfig(
+        name="OmniAGI",
+        settings_path=config_paths["settings_path"],
+        personality_path=config_paths["personality_path"]
     )
 
+    # Initialize agent with config and api keys
+    agent = Agent(config=agent_config, api_keys=api_keys)
     asyncio.run(agent.start())

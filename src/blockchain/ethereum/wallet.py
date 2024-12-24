@@ -10,7 +10,7 @@ from zksync2.module.module_builder import ZkSyncBuilder
 logger = logging.getLogger(__name__)
 
 
-class ZkWallet:
+class EthereumWallet:
     def __init__(
         self, rpc_url: str, zksync_url: str, private_key: Optional[str] = None
     ):

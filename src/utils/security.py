@@ -3,14 +3,19 @@ import secrets
 from base64 import b64encode
 from typing import Optional, Tuple
 from cryptography.fernet import Fernet
+import os
 
+class SecurityError(Exception):
+    """Custom exception for security-related errors."""
+    pass
 
 class Security:
     """Security utilities for the agent."""
 
-    def __init__(self, encryption_key: Optional[str] = None):
+    def __init__(self, encryption_key: Optional[str] = None, secret_key: Optional[str] = None):
         self.encryption_key = encryption_key or Fernet.generate_key()
         self.fernet = Fernet(self.encryption_key)
+        self.secret_key = secret_key or os.urandom(32).hex()
 
     def generate_nonce(self, length: int = 32) -> str:
         """Generate a secure random nonce."""
@@ -18,7 +23,7 @@ class Security:
 
     def hash_data(self, data: str) -> str:
         """Create a secure hash of data."""
-        return hashlib.sha256(data.encode()).hexdigest()
+        return hashlib.sha256(data.encode() + self.secret_key.encode()).hexdigest()
 
     def encrypt(self, data: str) -> str:
         """Encrypt sensitive data."""
