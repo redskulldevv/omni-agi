@@ -131,15 +131,23 @@ class SecurityService:
         try:
             # Basic parameter validation
             required_params = ['type', 'amount', 'token']
-            if not all(param in trade_params for param in required_params):
+            missing_params = [param for param in required_params if param not in trade_params]
+            if missing_params:
+                logger.error(f"Missing required trade parameters: {missing_params}")
                 return False
                 
             # Validate trade size
             if not self._validate_trade_size(trade_params['amount']):
+                logger.error(f"Trade size validation failed for amount: {trade_params['amount']}")
                 return False
                 
             # Check security conditions
-            return self._check_security_conditions(trade_params)
+            if not self._check_security_conditions(trade_params):
+                logger.error(f"Security condition check failed for trade parameters: {trade_params}")
+                return False
+            
+            logger.info(f"Trade verification successful for trade parameters: {trade_params}")
+            return True
             
         except Exception as e:
             logger.error(f"Trade verification error: {e}")
@@ -151,7 +159,11 @@ class SecurityService:
             max_trade_size = self.config.get('max_trade_size', 1000)
             min_trade_size = self.config.get('min_trade_size', 0.1)
             
-            return min_trade_size <= amount <= max_trade_size
+            if not (min_trade_size <= amount <= max_trade_size):
+                logger.error(f"Trade amount {amount} is out of bounds ({min_trade_size} - {max_trade_size})")
+                return False
+            
+            return True
             
         except Exception as e:
             logger.error(f"Trade size validation error: {e}")

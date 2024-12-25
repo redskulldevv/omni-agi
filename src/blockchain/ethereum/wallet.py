@@ -1,11 +1,12 @@
 # src/blockchain/ethereum/wallet.py
 
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from eth_account import Account
 import asyncio
+from web3.types import Wei
 
 logger = logging.getLogger(__name__)
 
@@ -18,33 +19,47 @@ class EthereumWallet:
     ):
         if not rpc_url:
             raise ValueError("RPC URL is required")
-            
+
+        # Store initialization parameters
+        self.rpc_url = rpc_url
+        self.zksync_url = zksync_url
+        self._private_key = None
+        self._initialized = False
+        
         # Initialize Web3
-        self.web3 = Web3(Web3.HTTPProvider(rpc_url))
-        self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        try:
+            self.web3 = Web3(Web3.HTTPProvider(rpc_url))
+            self.web3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        except Exception as e:
+            logger.error(f"Failed to initialize Web3: {e}")
+            raise
         
         # Initialize account
-        if private_key:
-            try:
-                # Format private key correctly
+        try:
+            if private_key:
                 clean_key = self._format_private_key(private_key)
+                self._private_key = clean_key
                 self.account = Account.from_key(clean_key)
                 self.address = self.account.address
                 logger.info(f"Account initialized with address: {self.address}")
-            except Exception as e:
-                logger.error(f"Error initializing account: {e}")
-                raise
-        else:
-            logger.warning("No private key provided, creating new account")
-            self.account = self.web3.eth.account.create()
-            self.address = self.account.address
-        
+            else:
+                logger.warning("No private key provided, creating new account")
+                self.account = self.web3.eth.account.create()
+                self.address = self.account.address
+                self._private_key = self.account._private_key.hex()
+        except Exception as e:
+            logger.error(f"Error initializing account: {e}")
+            raise
+
         # Initialize zksync if URL provided
         self.zksync_enabled = bool(zksync_url)
         if self.zksync_enabled:
-            self.zksync_web3 = Web3(Web3.HTTPProvider(zksync_url))
-            
-        self._initialized = False
+            try:
+                self.zksync_web3 = Web3(Web3.HTTPProvider(zksync_url))
+            except Exception as e:
+                logger.error(f"Failed to initialize zkSync: {e}")
+                self.zksync_enabled = False
+                
         self._loop = asyncio.get_event_loop()
 
     def _format_private_key(self, key: str) -> str:
@@ -71,56 +86,38 @@ class EthereumWallet:
             logger.error(f"Error formatting private key: {e}")
             raise ValueError(f"Invalid private key format: {str(e)}")
 
-    async def initialize(self) -> None:
-        """Initialize the wallet and verify connection"""
+    async def _check_connection(self) -> Tuple[bool, Optional[int]]:
+        """Check connection to Ethereum node and get chain ID"""
         try:
-            # Check connection
-            if not await self._check_connection():
-                raise ConnectionError("Failed to connect to Ethereum node")
-                
-            # Verify account
-            if not self.web3.is_address(self.address):
-                raise ValueError(f"Invalid Ethereum address: {self.address}")
-                
-            # Check balance to verify account access
-            balance = await self.get_balance()
-            logger.info(f"Account balance: {balance} ETH")
-                
-            self._initialized = True
-            logger.info(f"Ethereum wallet initialized for address: {self.address}")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize Ethereum wallet: {e}")
-            raise
-
-    async def _check_connection(self) -> bool:
-        """Check connection to Ethereum node"""
-        try:
-            logger.info(f"Checking connection to Ethereum node at {self.web3.provider.endpoint_uri}")
             connected = await self._loop.run_in_executor(
                 None, 
                 self.web3.is_connected
             )
+            
             if connected:
-                # Get network info
-                network_chain_id = await self._loop.run_in_executor(
+                chain_id = await self._loop.run_in_executor(
                     None,
                     lambda: self.web3.eth.chain_id
                 )
-                logger.info(f"Connected to network with chain ID: {network_chain_id}")
+                logger.info(f"Connected to network with chain ID: {chain_id}")
+                return True, chain_id
             else:
                 logger.error("Failed to connect to Ethereum node")
-            return connected
+                return False, None
+                
         except Exception as e:
             logger.error(f"Connection check failed: {e}")
-            return False
+            return False, None
 
-    async def get_balance(self) -> float:
-        """Get ETH balance for wallet address"""
-        if not self._initialized:
-            raise RuntimeError("Wallet not initialized")
-            
+    async def _check_account(self) -> bool:
+        """Verify account and get initial balance"""
         try:
+            # Verify address format
+            if not self.web3.is_address(self.address):
+                logger.error(f"Invalid Ethereum address: {self.address}")
+                return False
+
+            # Get balance without requiring initialization
             balance_wei = await self._loop.run_in_executor(
                 None,
                 self.web3.eth.get_balance,
@@ -128,65 +125,103 @@ class EthereumWallet:
             )
             
             balance_eth = self.web3.from_wei(balance_wei, 'ether')
-            return float(balance_eth)
+            logger.info(f"Initial balance: {balance_eth} ETH")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Account check failed: {e}")
+            return False
+
+    async def initialize(self) -> None:
+        """Initialize the wallet"""
+        try:
+            # Check connection first
+            connected, chain_id = await self._check_connection()
+            if not connected:
+                raise ConnectionError(f"Failed to connect to Ethereum node at {self.rpc_url}")
+
+            # Verify account
+            if not await self._check_account():
+                raise ValueError("Failed to verify account")
+
+            # Initialize zkSync if enabled
+            if self.zksync_enabled:
+                zk_connected = await self._loop.run_in_executor(
+                    None,
+                    self.zksync_web3.is_connected
+                )
+                if not zk_connected:
+                    logger.warning("Failed to connect to zkSync node")
+                    self.zksync_enabled = False
+
+            self._initialized = True
+            logger.info("Ethereum wallet initialized successfully")
+            
+        except Exception as e:
+            self._initialized = False
+            logger.error(f"Failed to initialize wallet: {e}")
+            raise
+
+    async def get_balance(self) -> float:
+        """Get ETH balance for wallet address"""
+        try:
+            balance_wei = await self._loop.run_in_executor(
+                None,
+                self.web3.eth.get_balance,
+                self.address
+            )
+            
+            return float(self.web3.from_wei(balance_wei, 'ether'))
             
         except Exception as e:
             logger.error(f"Error getting balance: {e}")
             raise
 
-    async def get_l2_balance(self, address: str) -> float:
-        """Get L2 balance"""
-        try:
-            if not self._initialized:
-                raise RuntimeError("Wallet not initialized")
-
-            balance = self.zksync_web3.eth.get_balance(address)
-            return Web3.from_wei(balance, "ether")
-        except Exception as e:
-            logger.error(f"Error getting L2 balance: {e}")
-            return 0.0
-
-    async def execute_trade(self, trade_params: Dict) -> Dict:
-        """Execute a trade"""
-        try:
-            # Implement trade execution logic
-            pass
-        except Exception as e:
-            logger.error(f"Error executing trade: {e}")
-            raise
-
     async def cleanup(self) -> None:
         """Cleanup wallet resources"""
         try:
+            # Close web3 connections
+            if hasattr(self.web3.provider, 'close'):
+                await self._loop.run_in_executor(
+                    None,
+                    self.web3.provider.close
+                )
+            
+            if self.zksync_enabled and hasattr(self.zksync_web3.provider, 'close'):
+                await self._loop.run_in_executor(
+                    None,
+                    self.zksync_web3.provider.close
+                )
+                
             self._initialized = False
             logger.info("Ethereum wallet cleaned up successfully")
+            
         except Exception as e:
             logger.error(f"Error cleaning up wallet: {e}")
 
 # Example usage:
 async def test_wallet():
+    """Test wallet functionality"""
     try:
-        # Test with various key formats
-        test_cases = [
-            "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-            None  # Should create new wallet
-        ]
+        # Initialize wallet
+        wallet = EthereumWallet(
+            rpc_url="https://sepolia.drpc.org",  # Goerli testnet
+            private_key="0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"  # Example key
+        )
         
-        for key in test_cases:
-            print(f"\nTesting with key: {key}")
-            try:
-                wallet = EthereumWallet(
-                    rpc_url="https://sepolia.drpc.org",
-                    private_key=key
-                )
-                await wallet.initialize()
-                print(f"Created wallet with address: {wallet.address}")
-            except Exception as e:
-                print(f"Failed to create wallet: {e}")
-                
+        print(f"\nInitializing wallet...")
+        await wallet.initialize()
+        
+        print(f"\nWallet address: {wallet.address}")
+        
+        balance = await wallet.get_balance()
+        print(f"Balance: {balance} ETH")
+        
+        await wallet.cleanup()
+        print("\nWallet cleaned up successfully")
+        
     except Exception as e:
-        print(f"Test failed: {e}")
+        print(f"\nTest failed: {e}")
 
 if __name__ == "__main__":
     asyncio.run(test_wallet())

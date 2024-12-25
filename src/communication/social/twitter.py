@@ -1,5 +1,5 @@
 import tweepy
-from typing import List, Dict, Optional, Union
+from typing import Any, List, Dict, Optional, Union
 import logging
 from datetime import datetime
 from dataclasses import dataclass
@@ -164,7 +164,15 @@ class TwitterClient:
         except Exception as e:
             logger.error(f"Error following user: {e}")
             raise
-
+    async def _get_twitter_metrics(self, username: str) -> Dict[str, Any]:
+        """Get Twitter metrics for the given username"""
+        try:
+            # Fetch metrics from Twitter API
+            metrics = {}  # Replace with actual API call
+            return metrics
+        except Exception as e:
+            self.logger.error(f"Error fetching Twitter metrics: {e}")
+            return {}
     async def analyze_audience(self) -> Dict[str, any]:
         """Analyze follower demographics and engagement"""
         try:

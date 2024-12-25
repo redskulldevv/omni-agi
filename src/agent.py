@@ -833,7 +833,175 @@ class Agent:
             self.logger.error(f"Error getting Jupiter prices: {e}")
             await self.handle_error(e)
             return {}
+    async def _generate_new_goals(self, current_context: Dict) -> List[Dict]:
+        """Generate new goals based on current context"""
+        try:
+            # Generate goals using AI model
+            response = await self.groq.generate_response(
+                prompt=f"Based on current context, generate new goals:\n{json.dumps(current_context, indent=2)}",
+                system_prompt=self.personality.get('goal_generation_prompt', 
+                    "You are an AI agent managing crypto assets and community. Generate strategic goals.")
+            )
+            
+            # Parse goals from response
+            try:
+                goals = json.loads(response)
+                if isinstance(goals, dict) and 'goals' in goals:
+                    return goals['goals']
+                return []
+            except json.JSONDecodeError:
+                self.logger.error("Failed to parse goals from AI response")
+                return []
+                
+        except Exception as e:
+            self.logger.error(f"Error generating goals: {e}")
+            await self.handle_error(e)
+            return []
 
+    async def _fetch_jupiter_price(self, token: str) -> float:
+        """Fetch token price from Jupiter API"""
+        try:
+            from blockchain.solana.trades import JupiterTrader
+            
+            # Initialize Jupiter trader if not exists
+            if not hasattr(self, '_jupiter_trader'):
+                self._jupiter_trader = JupiterTrader()
+            
+            # Get price
+            price_data = await self._jupiter_trader.get_token_price(token)
+            if price_data.get('success'):
+                return price_data['price']
+            
+            self.logger.error(f"Failed to fetch price for {token}")
+            return 0.0
+            
+        except Exception as e:
+            self.logger.error(f"Error fetching {token} price: {e}")
+            return 0.0
+
+    async def _get_twitter_metrics(self, username: Optional[str] = None) -> Dict:
+        """Get Twitter metrics with proper error handling"""
+        try:
+            if username is None:
+                username = self.settings.get('social', {}).get('twitter', {}).get('username')
+                if not username:
+                    raise ValueError("Twitter username not configured")
+
+            # Placeholder for Twitter API integration
+            # Replace with actual Twitter API calls
+            metrics = {
+                "followers": 0,
+                "engagement_rate": 0.0,
+                "tweet_count": 0,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            return metrics
+            
+        except Exception as e:
+            self.logger.error(f"Error getting Twitter metrics: {e}")
+            return {}
+
+    async def _get_discord_metrics(self) -> Dict:
+        """Get Discord metrics with proper error handling"""
+        try:
+            # Placeholder for Discord API integration
+            # Replace with actual Discord API calls
+            metrics = {
+                "members": 0,
+                "active_users": 0,
+                "message_count": 0,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            return metrics
+            
+        except Exception as e:
+            self.logger.error(f"Error getting Discord metrics: {e}")
+            return {}
+
+    async def _generate_report_summary(self, report_content: str) -> str:
+        """Generate concise summary of report content"""
+        try:
+            # Use AI to generate summary
+            summary = await self.groq.generate_response(
+                prompt=f"Summarize this report in 2-3 sentences:\n{report_content}",
+                system_prompt="You are a research analyst. Create a concise summary.",
+                max_tokens=150
+            )
+            
+            return summary.strip()
+            
+        except Exception as e:
+            self.logger.error(f"Error generating report summary: {e}")
+            return "Summary generation failed"
+
+    async def _format_for_twitter(self, content: str) -> str:
+        """Format content for Twitter with character limit"""
+        try:
+            if len(content) <= 280:
+                return content
+                
+            # Use AI to shorten content
+            shortened = await self.groq.generate_response(
+                prompt=f"Shorten this to fit Twitter's 280 character limit while maintaining key information:\n{content}",
+                system_prompt="You are a social media expert. Create concise tweets.",
+                max_tokens=100
+            )
+            
+            return shortened[:280]
+            
+        except Exception as e:
+            self.logger.error(f"Error formatting for Twitter: {e}")
+            return content[:280]
+
+    async def _format_for_discord(self, content: str) -> str:
+        """Format content for Discord with proper formatting"""
+        try:
+            # Add Discord markdown formatting
+            formatted = f"```\nMarket Update\n\n{content}\n```"
+            return formatted
+            
+        except Exception as e:
+            self.logger.error(f"Error formatting for Discord: {e}")
+            return content
+
+    async def _get_social_metrics(self, target: str) -> Dict:
+        """Get social metrics for target"""
+        try:
+            return {
+                "twitter": await self._get_twitter_metrics(target),
+                "discord": await self._get_discord_metrics()
+            }
+        except Exception as e:
+            self.logger.error(f"Error getting social metrics: {e}")
+            return {}
+
+    async def _get_market_metrics(self, target: str) -> Dict:
+        """Get market metrics for target"""
+        try:
+            # Implement market metrics collection
+            return {}
+        except Exception as e:
+            self.logger.error(f"Error getting market metrics: {e}")
+            return {}
+
+    async def _analyze_tech_stack(self, target: str) -> Dict:
+        """Analyze technical aspects of target"""
+        try:
+            # Implement tech analysis
+            return {}
+        except Exception as e:
+            self.logger.error(f"Error analyzing tech stack: {e}")
+            return {}
+
+    async def _analyze_engagement_trends(self, metrics: Dict) -> None:
+        """Analyze social engagement trends"""
+        try:
+            # Implement trend analysis
+            pass
+        except Exception as e:
+            self.logger.error(f"Error analyzing engagement trends: {e}")
     async def cleanup(self) -> None:
         """Cleanup agent resources"""
         try:

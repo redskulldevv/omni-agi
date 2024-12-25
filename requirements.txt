@@ -45,4 +45,4 @@ requests
 web3
 eth_account
 xgboost
-
+textblob

@@ -152,7 +152,14 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"Error retrieving memories: {e}")
             raise
-
+    async def store_research(self, research: Dict[str, Any]) -> None:
+        """Store research data"""
+        try:
+            # Placeholder for actual implementation
+            pass
+        except Exception as e:
+            self.logger.error(f"Error storing research: {e}")
+            raise
     async def get_recent_memories(
         self,
         memory_type: Optional[MemoryType] = None,

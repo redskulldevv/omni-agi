@@ -239,3 +239,40 @@ class SocialAnalytics:
             )
 
         return recommendations
+
+
+class SocialMetricsManager:
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.logger = logging.getLogger(__name__)
+
+    async def get_twitter_metrics(self, username: str) -> Dict[str, Any]:
+        """Get Twitter metrics for specific username"""
+        try:
+            # Initialize Twitter client with your credentials
+            # This is a placeholder - implement actual Twitter API calls
+            metrics = {
+                "followers": 0,
+                "engagement_rate": 0.0,
+                "recent_mentions": 0,
+                "timestamp": datetime.now().isoformat()
+            }
+            return metrics
+        except Exception as e:
+            self.logger.error(f"Twitter metrics error for {username}: {str(e)}")
+            return {}
+
+    async def get_discord_metrics(self, guild_id: str) -> Dict[str, Any]:
+        """Get Discord metrics"""
+        try:
+            # Implement Discord metrics collection
+            metrics = {
+                "members": 0,
+                "active_users": 0,
+                "messages_24h": 0,
+                "timestamp": datetime.now().isoformat()
+            }
+            return metrics
+        except Exception as e:
+            self.logger.error(f"Discord metrics error: {str(e)}")
+            return {}
