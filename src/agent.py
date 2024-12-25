@@ -7,7 +7,7 @@ import os
 import sys
 import yaml
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
@@ -37,11 +37,64 @@ from utils.errors import SecurityError, AgentError
 from utils.security import SecurityService
 from utils.error_handler import ErrorHandler
 
-@dataclass
 class AgentConfig:
-    name: str
-    personality_path: str
-    settings_path: str
+    """Agent configuration with proper validation"""
+    
+    def __init__(self, config_path: Optional[str] = None):
+        self.logger = logging.getLogger(__name__)
+        self._config: Dict[str, Any] = {}
+        
+        # Default configuration
+        self.defaults = {
+            'twitter_username': None,
+            'loop_interval': 5,
+            'max_retries': 3,
+            'log_level': 'INFO',
+        }
+        
+        if config_path:
+            self.load_config(config_path)
+        else:
+            self._config = self.defaults.copy()
+    
+    def load_config(self, config_path: str) -> None:
+        """Load configuration from file with validation"""
+        try:
+            with open(config_path, 'r') as f:
+                config_data = json.load(f)
+                
+            # Merge with defaults
+            self._config = {**self.defaults, **config_data}
+            
+            # Validate required fields
+            self._validate_config()
+            
+        except Exception as e:
+            self.logger.error(f"Error loading config: {str(e)}")
+            self._config = self.defaults.copy()
+    
+    def _validate_config(self) -> None:
+        """Validate configuration values"""
+        if not self._config.get('twitter_username'):
+            self.logger.warning("Twitter username not configured")
+            
+        if not isinstance(self._config.get('loop_interval'), (int, float)):
+            self.logger.warning("Invalid loop_interval, using default")
+            self._config['loop_interval'] = self.defaults['loop_interval']
+            
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get configuration value with default"""
+        return self._config.get(key, default)
+    
+    @property
+    def twitter_username(self) -> Optional[str]:
+        """Get Twitter username with validation"""
+        return self._config.get('twitter_username')
+    
+    @property
+    def loop_interval(self) -> int:
+        """Get loop interval with validation"""
+        return int(self._config.get('loop_interval', self.defaults['loop_interval']))
 
 class Agent:
     def __init__(self, config: AgentConfig, api_keys: Dict[str, str]):
@@ -1019,50 +1072,25 @@ class Agent:
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
             # Don't raise here as we're already cleaning up
-
 if __name__ == "__main__":
     async def main():
-        # Load environment variables
-        load_dotenv()
-
-        # Get project root and configure paths
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        config_paths = {
-            "settings_path": os.path.join(project_root, "config", "settings.yaml"),
-            "personality_path": os.path.join(project_root, "config", "personality.yaml"),
-        }
-
-        # Create API keys dictionary
-        api_keys = {
-            "groq": os.getenv("GROQ_API_KEY"),
-            "solana_rpc": os.getenv("SOLANA_RPC_URL"),
-            "ethereum_rpc": os.getenv("ETH_RPC_URL"),
-            "zksync_rpc": os.getenv("ZKSYNC_RPC_URL"),
-            "eth_private_key": os.getenv("ETH_PRIVATE_KEY"),
-        }
-
-        # Initialize and run agent
+        agent = None
         try:
-            # Initialize agent config
-            agent_config = AgentConfig(
-                name="OmniAGI",
-                settings_path=config_paths["settings_path"],
-                personality_path=config_paths["personality_path"]
-            )
-
-            # Create and start agent
-            agent = Agent(config=agent_config, api_keys=api_keys)
+            load_dotenv()
+            agent_config = AgentConfig(config_path="config/agent_config.yaml")
+            agent = Agent(config=agent_config)
             
-            # Run agent
             await agent.start()
-            
+                
         except KeyboardInterrupt:
-            logger.info("Shutting down agent...")
-            await agent.cleanup()
-            
+            if agent:
+                await agent.cleanup()
+            logging.info("Shutting down agent...")
+                
         except Exception as e:
-            logger.error(f"Critical error: {e}")
-            await agent.cleanup()
+            logging.error(f"Critical error: {e}")
+            if agent:
+                await agent.cleanup()
             sys.exit(1)
 
     asyncio.run(main())

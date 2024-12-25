@@ -216,7 +216,13 @@ class MemoryManager:
         except Exception as e:
             logger.error(f"Error consolidating memories: {e}")
             raise
-
+    async def store_metrics(self, metrics: Dict[str, Any]) -> None:
+        """Store engagement metrics"""
+        try:
+            self.metrics.append(metrics)
+            self.logger.info("Metrics stored successfully")
+        except Exception as e:
+            self.logger.error(f"Error storing metrics: {str(e)}")
     async def clear_memory(self, memory_type: Optional[MemoryType] = None):
         """Clear memories of specified type"""
         if memory_type:
