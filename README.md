@@ -9,7 +9,7 @@ Omni AGI is an autonomous AI agent designed for blockchain operations and ventur
 - **DeFi Integration**: Built-in interfaces for Aave, Uniswap, and other major DeFi protocols
 - **Social Intelligence**: Twitter and Discord integration for community engagement and sentiment analysis
 - **Advanced Cognition**: Memory management, learning systems, and goal-oriented behavior
-- **Market Analysis**: Real-time crypto market analysis and portfolio management
+- **Market Analysis**: Real-time crypto market analysis and portfolio management.
 
 ## Architecture
 ```
